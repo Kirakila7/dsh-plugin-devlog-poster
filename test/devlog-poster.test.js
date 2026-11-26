@@ -16,11 +16,14 @@ import {
   savePlatformDraft,
   formatWorkReport,
   sendWorkReport,
+  buildAllPlatformImagePrompts,
+  generateVisualImage,
 } from '../src/index.js';
 import { AVAILABLE_STYLES } from '../src/styles.js';
 import { SUPPORTED_REPORT_CHANNELS } from '../src/work-report.js';
+import { SUPPORTED_IMAGE_PROVIDERS } from '../src/image-gen.js';
 
-test('DSH Cordis plugin exports name, inject, and registers 5 tools cleanly', async () => {
+test('DSH Cordis plugin exports name, inject, and registers 6 tools cleanly', async () => {
   assert.equal(name, 'dsh-plugin-devlog-poster');
   assert.deepEqual(inject, ['tools']);
 
@@ -39,7 +42,7 @@ test('DSH Cordis plugin exports name, inject, and registers 5 tools cleanly', as
   };
 
   const cleanup = apply(mockCtx);
-  assert.equal(registered.length, 5);
+  assert.equal(registered.length, 6);
   assert.deepEqual(
     registered.map((t) => t.name),
     [
@@ -48,6 +51,7 @@ test('DSH Cordis plugin exports name, inject, and registers 5 tools cleanly', as
       'devlog_publish_github',
       'devlog_save_draft',
       'devlog_send_work_report',
+      'devlog_generate_image',
     ]
   );
 
@@ -91,7 +95,7 @@ test('DSH Cordis plugin exports name, inject, and registers 5 tools cleanly', as
   }
 
   cleanup();
-  assert.equal(disposedCount, 5);
+  assert.equal(disposedCount, 6);
 });
 
 test('collectGitContext reads commits and diff stats from a real git repository', () => {
@@ -190,6 +194,33 @@ test('formats daily/weekly work reports and builds webhook payloads for all 6 ch
     assert.equal(res.dryRun, true);
     assert.equal(res.channel, channel);
     assert.ok(res.body);
+  }
+});
+
+test('builds platform-adapted image prompts and provider requests for all image providers', async () => {
+  const ctx = collectGitContext({
+    repoPath: process.cwd(),
+    projectName: 'Kirakila7/dsh-plugin-devlog-poster',
+    highlights: ['图文版支持绑定生图模型与平台提示词模板'],
+  });
+
+  const allPrompts = buildAllPlatformImagePrompts(ctx, { style: 'big_fat_fish' });
+  assert.equal(allPrompts.xiaohongshu.aspectRatio, '3:4');
+  assert.equal(allPrompts.bilibili.aspectRatio, '16:9');
+  assert.ok(allPrompts.xiaohongshu.prompt.includes('blue whale'));
+
+  for (const provider of SUPPORTED_IMAGE_PROVIDERS) {
+    const res = await generateVisualImage({
+      context: ctx,
+      platform: 'xiaohongshu',
+      style: 'gemini',
+      provider,
+      dryRun: true,
+    });
+    assert.equal(res.ok, true);
+    assert.equal(res.dryRun, true);
+    assert.equal(res.provider, provider);
+    assert.ok(res.promptSpec.prompt.includes('four-point crystal sparkles'));
   }
 });
 

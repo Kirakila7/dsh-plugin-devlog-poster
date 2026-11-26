@@ -3,6 +3,11 @@ import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
 import { savePlatformDraft } from './draft-automation.js';
 import { formatWorkReport, sendWorkReport } from './work-report.js';
+import {
+  buildAllPlatformImagePrompts,
+  buildImagePrompt,
+  generateVisualImage,
+} from './image-gen.js';
 
 export const name = 'dsh-plugin-devlog-poster';
 export const inject = ['tools'];
@@ -333,6 +338,94 @@ function createToolSpecs(config = {}) {
         return { ...sent, report };
       },
     },
+    {
+      name: 'devlog_generate_image',
+      description:
+        'Build platform-adapted image generation prompt (Xiaohongshu / Bilibili / Douyin / GitHub) bound to a model style, and optionally invoke an image model provider (openai / gemini / volcengine / custom_openai / svg_fallback). Defaults to dryRun=true.',
+      parameters: {
+        repoPath: {
+          type: 'string',
+          required: false,
+          description: 'Local git repository path.',
+        },
+        projectName: {
+          type: 'string',
+          required: false,
+          description: 'Project display name.',
+        },
+        highlights: {
+          type: 'array',
+          required: false,
+          description: 'Key devlog milestone highlights to visualize.',
+        },
+        platform: {
+          type: 'string',
+          required: false,
+          description: 'Target platform preset: "xiaohongshu" | "bilibili" | "douyin" | "github".',
+        },
+        style: {
+          type: 'string',
+          required: false,
+          description: 'Model style: "big_fat_fish" | "gemini" | "chatgpt" | "claude".',
+        },
+        provider: {
+          type: 'string',
+          required: false,
+          description:
+            'Image model provider: "openai" | "gemini" | "volcengine" | "custom_openai" | "svg_fallback".',
+        },
+        model: {
+          type: 'string',
+          required: false,
+          description: 'Optional model override (e.g. gpt-image-1, imagen-3.0-generate-002, doubao-seedream-3-0-t2i-250415).',
+        },
+        endpoint: {
+          type: 'string',
+          required: false,
+          description: 'Optional custom API endpoint URL.',
+        },
+        apiKey: {
+          type: 'string',
+          required: false,
+          description: 'Optional API key (falls back to OPENAI_API_KEY / GEMINI_API_KEY / ARK_API_KEY).',
+        },
+        outputPath: {
+          type: 'string',
+          required: false,
+          description: 'Optional PNG file output path when dryRun=false.',
+        },
+        dryRun: {
+          type: 'boolean',
+          required: false,
+          description: 'Preview prompt & provider request without spending credits (default: true).',
+        },
+      },
+      output: {
+        schema: { type: 'object' },
+        render: (_args, value) => [
+          {
+            type: 'text',
+            text: value.dryRun
+              ? `[DRY RUN] Image prompt ready for ${value.promptSpec.label} (${value.promptSpec.aspectRatio}) via ${value.provider}/${value.model}`
+              : `Image generated via ${value.provider}/${value.model}: ${value.savedPath || value.imageUrl || 'ok'}`,
+          },
+        ],
+      },
+      async execute(args = {}) {
+        const context = collectGitContext(args);
+        return generateVisualImage({
+          context,
+          platform: args.platform || 'xiaohongshu',
+          style: args.style || config.defaultStyle || 'big_fat_fish',
+          provider: args.provider || config.imageProvider || 'openai',
+          model: args.model || config.imageModel,
+          endpoint: args.endpoint || config.imageEndpoint,
+          apiKey: args.apiKey || config.imageApiKey,
+          outputPath: args.outputPath,
+          dryRun: args.dryRun !== false,
+        });
+      },
+    },
   ];
 }
 
@@ -363,4 +456,7 @@ export {
   savePlatformDraft,
   formatWorkReport,
   sendWorkReport,
+  buildImagePrompt,
+  buildAllPlatformImagePrompts,
+  generateVisualImage,
 };

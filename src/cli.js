@@ -4,6 +4,7 @@ import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
 import { savePlatformDraft } from './draft-automation.js';
 import { formatWorkReport, sendWorkReport } from './work-report.js';
+import { generateVisualImage } from './image-gen.js';
 
 function parseArgs(argv) {
   const [command = 'generate', ...rest] = argv;
@@ -101,6 +102,22 @@ function parseArgs(argv) {
         opts.period = next;
         i++;
         break;
+      case '--provider':
+        opts.provider = next;
+        i++;
+        break;
+      case '--model':
+        opts.model = next;
+        i++;
+        break;
+      case '--api-key':
+        opts.apiKey = next;
+        i++;
+        break;
+      case '--output':
+        opts.outputPath = next;
+        i++;
+        break;
       case '--execute':
         opts.dryRun = false;
         break;
@@ -124,7 +141,32 @@ Usage:
   devlog-poster publish-github [--mode devlog_file|release] [--tag v0.3.0] [--execute]
   devlog-poster save-draft --platform xiaohongshu|bilibili|douyin --bundle <bundleDir> [--execute]
   devlog-poster send-report --channel feishu|dingtalk|wecom|slack|discord|qq_onebot [--period daily|weekly] [--endpoint <url>] [--group-id <id>] [--execute]
+  devlog-poster generate-image --platform xiaohongshu|bilibili|douyin|github --provider openai|gemini|volcengine|custom_openai|svg_fallback [--style big_fat_fish] [--execute]
 `);
+    return;
+  }
+
+  if (command === 'generate-image') {
+    const context = collectGitContext({
+      repoPath: opts.repoPath || process.cwd(),
+      projectName: opts.projectName,
+      since: opts.since || '24 hours ago',
+      highlights: opts.highlights,
+      pitfalls: opts.pitfalls,
+      nextSteps: opts.nextSteps,
+    });
+    const result = await generateVisualImage({
+      context,
+      platform: opts.platform || 'xiaohongshu',
+      style: opts.style || 'big_fat_fish',
+      provider: opts.provider || 'openai',
+      model: opts.model,
+      endpoint: opts.endpoint,
+      apiKey: opts.apiKey,
+      outputPath: opts.outputPath,
+      dryRun: opts.dryRun !== false,
+    });
+    console.log(JSON.stringify(result, null, 2));
     return;
   }
 

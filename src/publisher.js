@@ -8,6 +8,7 @@ import {
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { AVAILABLE_STYLES, MODEL_STYLES } from './styles.js';
 import { formatWorkReport } from './work-report.js';
+import { buildAllPlatformImagePrompts } from './image-gen.js';
 
 function escapeHtml(str = '') {
   return String(str)
@@ -54,6 +55,7 @@ function buildStyleVariants(context, defaultFormatted) {
       },
       verticalSvg: renderVerticalCardSvg(context, formatted),
       horizontalSvg: renderHorizontalCardSvg(context, formatted),
+      imagePrompts: buildAllPlatformImagePrompts(context, { style: styleId }),
     };
   }
   return variants;
@@ -177,17 +179,34 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
   <section class="grid" style="margin-top: 20px;">
     <section class="panel">
       <div class="panel-head">
-        <h2>📋 工作日报 · 纯文本版（QQ / 微信 / Slack）</h2>
+        <h2>📄 文本版（QQ / 微信 / Slack 纯文本）</h2>
         <button onclick="copyText('work-plain', this)">一键复制</button>
       </div>
       <textarea id="work-plain" rows="9">${escapeHtml(workReport.qqText)}</textarea>
     </section>
     <section class="panel">
       <div class="panel-head">
-        <h2>📝 工作日报 · Markdown 版（飞书 / 钉钉 / 企微 / Discord）</h2>
+        <h2>📝 Markdown 版（GitHub / 飞书 / 钉钉 / 企微 / Discord）</h2>
         <button onclick="copyText('work-md', this)">一键复制</button>
       </div>
       <textarea id="work-md" rows="9">${escapeHtml(workReport.markdown)}</textarea>
+    </section>
+  </section>
+
+  <section class="grid" style="margin-top: 20px;">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>🎨 图文版 · 生图提示词（小红书 3:4 / 抖音 3:4）</h2>
+        <button onclick="copyText('prompt-xhs', this)">复制 Prompt</button>
+      </div>
+      <textarea id="prompt-xhs" rows="7">${escapeHtml(initial.imagePrompts.xiaohongshu.prompt)}</textarea>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>🎨 图文版 · 生图提示词（B站 16:9 / GitHub 16:9）</h2>
+        <button onclick="copyText('prompt-bili', this)">复制 Prompt</button>
+      </div>
+      <textarea id="prompt-bili" rows="7">${escapeHtml(initial.imagePrompts.bilibili.prompt)}</textarea>
     </section>
   </section>
 
@@ -228,6 +247,8 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       document.getElementById('github-text').value = v.platforms.github.text;
       document.getElementById('svg-vertical').innerHTML = v.verticalSvg;
       document.getElementById('svg-horizontal').innerHTML = v.horizontalSvg;
+      document.getElementById('prompt-xhs').value = v.imagePrompts.xiaohongshu.prompt;
+      document.getElementById('prompt-bili').value = v.imagePrompts.bilibili.prompt;
       document.querySelectorAll('.style-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.style === styleId);
       });
@@ -293,6 +314,7 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
     douyin: join(bundleDir, 'douyin.md'),
     workDailyMd: join(bundleDir, 'work-daily.md'),
     workDailyPlain: join(bundleDir, 'work-daily-plain.txt'),
+    imagePrompts: join(bundleDir, 'image-prompts.json'),
     cardVertical: join(bundleDir, 'card-vertical.svg'),
     cardHorizontal: join(bundleDir, 'card-horizontal.svg'),
     preview: join(bundleDir, 'preview.html'),
@@ -313,6 +335,11 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
   );
   writeFileSync(files.workDailyMd, workReport.markdown + '\n', 'utf8');
   writeFileSync(files.workDailyPlain, workReport.qqText + '\n', 'utf8');
+  writeFileSync(
+    files.imagePrompts,
+    JSON.stringify(variants[activeStyle].imagePrompts, null, 2) + '\n',
+    'utf8'
+  );
   writeFileSync(files.cardVertical, verticalSvg, 'utf8');
   writeFileSync(files.cardHorizontal, horizontalSvg, 'utf8');
   writeFileSync(files.preview, previewHtml, 'utf8');

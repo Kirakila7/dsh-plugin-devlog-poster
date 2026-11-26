@@ -33,6 +33,7 @@ dsh plugin --profile web add github:Kirakila7/dsh-plugin-devlog-poster
 | `devlog_publish_github` | 追加写入 `DEVLOG.md` 或调用 `gh release create` 发布（默认 `dryRun: true` 防误发） |
 | `devlog_save_draft` | 使用独立 Playwright 浏览器自动渲染 PNG 卡片并填表存入小红书 / B站 / 抖音草稿箱（永不自动点发布，默认 `dryRun: true`） |
 | `devlog_send_work_report` | 生成结构化工作日报/周报，并通过 Webhook 推送到 **飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ (OneBot v11)**（默认 `dryRun: true`） |
+| `devlog_generate_image` | 图文版专用：按平台（小红书 3:4 / B站 16:9 / 抖音 3:4 / GitHub 16:9）与模型风格生成生图提示词模板，并可绑定 **OpenAI / Gemini Imagen / 火山引擎 Seedream / OpenAI 兼容端点** 出图（默认 `dryRun: true`） |
 
 ---
 
@@ -63,6 +64,10 @@ node src/cli.js save-draft --platform xiaohongshu --bundle out/<你的目录> --
 # 生成并推送工作日报 / 周报（支持 feishu / dingtalk / wecom / slack / discord / qq_onebot）
 node src/cli.js send-report --channel feishu --endpoint https://open.feishu.cn/open-apis/bot/v2/hook/xxx --period daily
 node src/cli.js send-report --channel qq_onebot --endpoint http://127.0.0.1:3000 --group-id 123456 --period daily --execute
+
+# 图文版：按平台与风格生成生图提示词，或直接调用绑定的生图模型出图
+node src/cli.js generate-image --platform xiaohongshu --style big_fat_fish --provider openai
+node src/cli.js generate-image --platform bilibili --style gemini --provider volcengine --output cover.png --execute
 
 运行测试：
 
