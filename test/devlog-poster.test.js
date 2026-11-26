@@ -13,10 +13,11 @@ import {
   formatMultiPlatformDevlog,
   writeDevlogBundle,
   publishToGitHub,
+  savePlatformDraft,
 } from '../src/index.js';
 import { AVAILABLE_STYLES } from '../src/styles.js';
 
-test('DSH Cordis plugin exports name, inject, and registers 3 tools cleanly', async () => {
+test('DSH Cordis plugin exports name, inject, and registers 4 tools cleanly', async () => {
   assert.equal(name, 'dsh-plugin-devlog-poster');
   assert.deepEqual(inject, ['tools']);
 
@@ -35,10 +36,15 @@ test('DSH Cordis plugin exports name, inject, and registers 3 tools cleanly', as
   };
 
   const cleanup = apply(mockCtx);
-  assert.equal(registered.length, 3);
+  assert.equal(registered.length, 4);
   assert.deepEqual(
     registered.map((t) => t.name),
-    ['devlog_collect_context', 'devlog_generate_bundle', 'devlog_publish_github']
+    [
+      'devlog_collect_context',
+      'devlog_generate_bundle',
+      'devlog_publish_github',
+      'devlog_save_draft',
+    ]
   );
 
   // Execute generate tool through registered spec
@@ -56,16 +62,32 @@ test('DSH Cordis plugin exports name, inject, and registers 3 tools cleanly', as
     assert.ok(existsSync(result.files.preview));
     assert.ok(existsSync(result.files.cardVertical));
     assert.ok(existsSync(result.files.cardHorizontal));
-    assert.ok(result.platforms.xiaohongshu.content.includes('#独立开发'));
-    assert.ok(result.platforms.bilibili.videoOutline.includes('60秒口播大纲'));
-    assert.ok(result.platforms.douyin.videoScript.includes('30秒快节奏口播'));
-    assert.ok(result.platforms.github.content.includes('What Changed'));
+    const previewHtml = readFileSync(result.files.preview, 'utf8');
+    assert.ok(previewHtml.includes('switchStyle('));
+    assert.ok(previewHtml.includes('window.__DEVLOG_VARIANTS__'));
+    assert.ok(previewHtml.includes('data-style="big_fat_fish"'));
+    assert.ok(previewHtml.includes('data-style="gemini"'));
+    assert.ok(previewHtml.includes('data-style="chatgpt"'));
+    assert.ok(previewHtml.includes('data-style="claude"'));
+
+    // Test v2 savePlatformDraft dry-run across Xiaohongshu, Bilibili, Douyin
+    for (const platform of ['xiaohongshu', 'bilibili', 'douyin']) {
+      const draftPlan = await savePlatformDraft({
+        platform,
+        bundleDir: result.bundleDir,
+        dryRun: true,
+      });
+      assert.equal(draftPlan.ok, true);
+      assert.equal(draftPlan.dryRun, true);
+      assert.equal(draftPlan.platform, platform);
+      assert.ok(draftPlan.steps.length >= 4);
+    }
   } finally {
     rmSync(tmpOut, { recursive: true, force: true });
   }
 
   cleanup();
-  assert.equal(disposedCount, 3);
+  assert.equal(disposedCount, 4);
 });
 
 test('collectGitContext reads commits and diff stats from a real git repository', () => {

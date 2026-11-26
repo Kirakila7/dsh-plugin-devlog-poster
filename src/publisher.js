@@ -5,6 +5,8 @@ import {
   renderHorizontalCardSvg,
   renderVerticalCardSvg,
 } from './card-renderer.js';
+import { formatMultiPlatformDevlog } from './formatter.js';
+import { AVAILABLE_STYLES, MODEL_STYLES } from './styles.js';
 
 function escapeHtml(str = '') {
   return String(str)
@@ -14,36 +16,84 @@ function escapeHtml(str = '') {
     .replace(/"/g, '&quot;');
 }
 
-function buildPreviewHtml(formatted, verticalSvg, horizontalSvg) {
-  const platforms = formatted.platforms;
+function safeJsonForScript(obj) {
+  return JSON.stringify(obj).replace(/</g, '\\u003c');
+}
+
+function buildStyleVariants(context, defaultFormatted) {
+  const variants = {};
+  for (const styleId of AVAILABLE_STYLES) {
+    const formatted =
+      styleId === defaultFormatted.meta.style
+        ? defaultFormatted
+        : formatMultiPlatformDevlog(context, { style: styleId });
+    variants[styleId] = {
+      id: styleId,
+      name: MODEL_STYLES[styleId].name,
+      emoji: MODEL_STYLES[styleId].emoji,
+      accent: MODEL_STYLES[styleId].accentFrom,
+      bg: MODEL_STYLES[styleId].bgStops[0],
+      title: formatted.meta.title,
+      statsLine: formatted.meta.statsLine,
+      platforms: {
+        xiaohongshu: {
+          text: formatted.platforms.xiaohongshu.content,
+        },
+        bilibili: {
+          text: formatted.platforms.bilibili.content,
+          extra: formatted.platforms.bilibili.videoOutline,
+        },
+        douyin: {
+          text: formatted.platforms.douyin.content,
+          extra: formatted.platforms.douyin.videoScript,
+        },
+        github: {
+          text: formatted.platforms.github.content,
+        },
+      },
+      verticalSvg: renderVerticalCardSvg(context, formatted),
+      horizontalSvg: renderHorizontalCardSvg(context, formatted),
+    };
+  }
+  return variants;
+}
+
+function buildPreviewHtml(defaultStyleId, variants) {
+  const initial = variants[defaultStyleId] || variants.big_fat_fish;
+  const switcherButtons = AVAILABLE_STYLES.map((id) => {
+    const item = variants[id];
+    const activeClass = id === initial.id ? 'style-btn active' : 'style-btn';
+    return `<button class="${activeClass}" data-style="${id}" onclick="switchStyle('${id}')">${escapeHtml(item.emoji)} ${escapeHtml(item.name)}</button>`;
+  }).join('\n      ');
+
   const sections = [
     {
       id: 'xiaohongshu',
       label: '小红书 · 图文笔记',
-      url: 'https://creator.xiaohongshu.com/publish/publish',
-      text: platforms.xiaohongshu.content,
+      url: 'https://creator.xiaohongshu.com/publish/publish?target=image',
+      text: initial.platforms.xiaohongshu.text,
     },
     {
       id: 'bilibili',
       label: 'B站 · 图文动态',
       url: 'https://t.bilibili.com/',
-      text: platforms.bilibili.content,
+      text: initial.platforms.bilibili.text,
       extraLabel: '60s 口播大纲',
-      extraText: platforms.bilibili.videoOutline,
+      extraText: initial.platforms.bilibili.extra,
     },
     {
       id: 'douyin',
       label: '抖音 · 图文 / 口播',
       url: 'https://creator.douyin.com/creator-micro/content/upload',
-      text: platforms.douyin.content,
+      text: initial.platforms.douyin.text,
       extraLabel: '30s 快节奏口播',
-      extraText: platforms.douyin.videoScript,
+      extraText: initial.platforms.douyin.extra,
     },
     {
       id: 'github',
       label: 'GitHub · Release / Devlog',
       url: 'https://github.com/',
-      text: platforms.github.content,
+      text: initial.platforms.github.text,
     },
   ];
 
@@ -77,31 +127,47 @@ function buildPreviewHtml(formatted, verticalSvg, horizontalSvg) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>${escapeHtml(formatted.meta.title)} · Devlog 预览</title>
+  <title>${escapeHtml(initial.title)} · Devlog 预览</title>
   <style>
-    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
-    body { margin: 0; padding: 28px; background: #0b1120; color: #e2e8f0; }
-    header { max-width: 1200px; margin: 0 auto 24px; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+    :root {
+      color-scheme: dark;
+      --accent: ${initial.accent};
+      --page-bg: ${initial.bg};
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+    body { margin: 0; padding: 28px; background: var(--page-bg); color: #e2e8f0; transition: background 0.25s ease; }
+    header { max-width: 1200px; margin: 0 auto 18px; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px; }
     h1 { margin: 0; font-size: 24px; color: #fff; }
     .meta { color: #94a3b8; font-size: 14px; }
+    .switcher { max-width: 1200px; margin: 0 auto 22px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .switcher-label { font-size: 13px; color: #94a3b8; margin-right: 4px; }
+    .style-btn { background: rgba(255,255,255,0.06); color: #cbd5e1; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.18s ease; }
+    .style-btn:hover { border-color: var(--accent); color: #fff; }
+    .style-btn.active { background: var(--accent); color: #090d16; border-color: var(--accent); }
     .grid { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 20px; }
-    .panel { background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 18px; }
+    .panel { background: rgba(17,24,39,0.88); border: 1px solid rgba(255,255,255,0.10); border-radius: 14px; padding: 18px; }
     .panel-head, .sub-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
-    .panel-head h2 { margin: 0; font-size: 17px; color: #38bdf8; }
+    .panel-head h2 { margin: 0; font-size: 17px; color: var(--accent); }
     .sub-head { margin-top: 12px; font-size: 13px; color: #cbd5e1; }
-    textarea { width: 100%; box-sizing: border-box; background: #0f172a; color: #f8fafc; border: 1px solid #334155; border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.6; resize: vertical; }
-    button, .link-btn { background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; }
+    textarea { width: 100%; box-sizing: border-box; background: rgba(15,23,42,0.9); color: #f8fafc; border: 1px solid rgba(148,163,184,0.28); border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.6; resize: vertical; }
+    .actions { display: flex; gap: 8px; }
+    button, .link-btn { background: var(--accent); color: #0f172a; border: none; border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; }
     .link-btn { background: #334155; color: #f8fafc; }
     .cards-wrap { max-width: 1200px; margin: 24px auto 0; display: grid; grid-template-columns: 1fr 1.4fr; gap: 20px; }
-    .card-box { background: #111827; border: 1px solid #1f2937; border-radius: 14px; padding: 16px; }
+    .card-box { background: rgba(17,24,39,0.88); border: 1px solid rgba(255,255,255,0.10); border-radius: 14px; padding: 16px; }
     .card-box svg { width: 100%; height: auto; border-radius: 10px; display: block; }
   </style>
 </head>
 <body>
   <header>
-    <h1>${escapeHtml(formatted.meta.title)}</h1>
-    <div class="meta">${escapeHtml(formatted.meta.statsLine)} · dsh-plugin-devlog-poster</div>
+    <h1 id="page-title">${escapeHtml(initial.title)}</h1>
+    <div class="meta" id="page-meta">${escapeHtml(initial.statsLine)} · dsh-plugin-devlog-poster</div>
   </header>
+
+  <nav class="switcher" aria-label="模型风格实时切换">
+    <span class="switcher-label">实时换肤：</span>
+    ${switcherButtons}
+  </nav>
 
   <main class="grid">
     ${cardsHtml}
@@ -111,20 +177,44 @@ function buildPreviewHtml(formatted, verticalSvg, horizontalSvg) {
     <div class="card-box">
       <div class="panel-head">
         <h2>3:4 竖版封面卡（小红书 / 抖音）</h2>
-        <button onclick="downloadPng('svg-vertical', 'devlog-vertical.png', 1080, 1440)">导出 PNG</button>
+        <button onclick="downloadPng('svg-vertical', 'vertical', 1080, 1440)">导出 PNG</button>
       </div>
-      <div id="svg-vertical">${verticalSvg}</div>
+      <div id="svg-vertical">${initial.verticalSvg}</div>
     </div>
     <div class="card-box">
       <div class="panel-head">
         <h2>16:9 横版进度卡（B站 / GitHub）</h2>
-        <button onclick="downloadPng('svg-horizontal', 'devlog-horizontal.png', 1600, 900)">导出 PNG</button>
+        <button onclick="downloadPng('svg-horizontal', 'horizontal', 1600, 900)">导出 PNG</button>
       </div>
-      <div id="svg-horizontal">${horizontalSvg}</div>
+      <div id="svg-horizontal">${initial.horizontalSvg}</div>
     </div>
   </section>
 
   <script>
+    window.__DEVLOG_VARIANTS__ = ${safeJsonForScript(variants)};
+    window.__CURRENT_STYLE__ = ${JSON.stringify(initial.id)};
+
+    function switchStyle(styleId) {
+      const v = window.__DEVLOG_VARIANTS__[styleId];
+      if (!v) return;
+      window.__CURRENT_STYLE__ = styleId;
+      document.documentElement.style.setProperty('--accent', v.accent);
+      document.documentElement.style.setProperty('--page-bg', v.bg);
+      document.getElementById('page-title').textContent = v.title;
+      document.getElementById('page-meta').textContent = v.statsLine + ' · ' + v.name + ' · dsh-plugin-devlog-poster';
+      document.getElementById('xiaohongshu-text').value = v.platforms.xiaohongshu.text;
+      document.getElementById('bilibili-text').value = v.platforms.bilibili.text;
+      document.getElementById('bilibili-extra').value = v.platforms.bilibili.extra;
+      document.getElementById('douyin-text').value = v.platforms.douyin.text;
+      document.getElementById('douyin-extra').value = v.platforms.douyin.extra;
+      document.getElementById('github-text').value = v.platforms.github.text;
+      document.getElementById('svg-vertical').innerHTML = v.verticalSvg;
+      document.getElementById('svg-horizontal').innerHTML = v.horizontalSvg;
+      document.querySelectorAll('.style-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.style === styleId);
+      });
+    }
+
     async function copyText(id, btn) {
       const el = document.getElementById(id);
       await navigator.clipboard.writeText(el.value);
@@ -133,7 +223,7 @@ function buildPreviewHtml(formatted, verticalSvg, horizontalSvg) {
       setTimeout(() => { btn.textContent = old; }, 1500);
     }
 
-    function downloadPng(containerId, filename, width, height) {
+    function downloadPng(containerId, kind, width, height) {
       const svgEl = document.querySelector('#' + containerId + ' svg');
       const xml = new XMLSerializer().serializeToString(svgEl);
       const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
@@ -147,7 +237,7 @@ function buildPreviewHtml(formatted, verticalSvg, horizontalSvg) {
         ctx.drawImage(img, 0, 0, width, height);
         URL.revokeObjectURL(url);
         const a = document.createElement('a');
-        a.download = filename;
+        a.download = 'devlog-' + window.__CURRENT_STYLE__ + '-' + kind + '.png';
         a.href = canvas.toDataURL('image/png');
         a.click();
       };
@@ -160,7 +250,7 @@ function buildPreviewHtml(formatted, verticalSvg, horizontalSvg) {
 }
 
 /**
- * Write all 4 platform drafts, SVG cards, and an interactive preview.html bundle.
+ * Write all 4 platform drafts, SVG cards, and an interactive multi-style preview.html bundle.
  */
 export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -171,9 +261,11 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
   const bundleDir = resolve(outputDir, `${stamp}-${safeName}`);
   mkdirSync(bundleDir, { recursive: true });
 
-  const verticalSvg = renderVerticalCardSvg(context, formatted);
-  const horizontalSvg = renderHorizontalCardSvg(context, formatted);
-  const previewHtml = buildPreviewHtml(formatted, verticalSvg, horizontalSvg);
+  const variants = buildStyleVariants(context, formatted);
+  const activeStyle = formatted.meta.style || 'big_fat_fish';
+  const verticalSvg = variants[activeStyle].verticalSvg;
+  const horizontalSvg = variants[activeStyle].horizontalSvg;
+  const previewHtml = buildPreviewHtml(activeStyle, variants);
 
   const files = {
     github: join(bundleDir, 'github.md'),
@@ -203,7 +295,7 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
   writeFileSync(files.preview, previewHtml, 'utf8');
   writeFileSync(
     files.manifest,
-    JSON.stringify({ context, formatted, files }, null, 2) + '\n',
+    JSON.stringify({ context, formatted, files, availableStyles: AVAILABLE_STYLES }, null, 2) + '\n',
     'utf8'
   );
 

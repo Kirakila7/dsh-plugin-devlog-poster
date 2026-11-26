@@ -2,6 +2,7 @@
 import { collectGitContext } from './git-context.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
+import { savePlatformDraft } from './draft-automation.js';
 
 function parseArgs(argv) {
   const [command = 'generate', ...rest] = argv;
@@ -63,6 +64,18 @@ function parseArgs(argv) {
         opts.ghRepo = next;
         i++;
         break;
+      case '--platform':
+        opts.platform = next;
+        i++;
+        break;
+      case '--bundle':
+        opts.bundleDir = next;
+        i++;
+        break;
+      case '--profile-dir':
+        opts.profileDir = next;
+        i++;
+        break;
       case '--execute':
         opts.dryRun = false;
         break;
@@ -74,17 +87,34 @@ function parseArgs(argv) {
   return { command, opts };
 }
 
-function main() {
+async function main() {
   const { command, opts } = parseArgs(process.argv.slice(2));
 
   if (command === 'help' || command === '--help' || command === '-h') {
     console.log(`dsh-plugin-devlog-poster CLI
 
 Usage:
-  devlog-poster generate [--repo <path>] [--name <project>] [--since "24 hours ago"]
-                         [--highlight "..."] [--pitfall "..."] [--next "..."] [--out out]
-  devlog-poster publish-github [--mode devlog_file|release] [--tag v0.1.0] [--execute]
+  devlog-poster generate [--repo <path>] [--name <project>] [--style big_fat_fish|gemini|chatgpt|claude]
+                         [--since "24 hours ago"] [--highlight "..."] [--pitfall "..."] [--next "..."] [--out out]
+  devlog-poster publish-github [--mode devlog_file|release] [--tag v0.2.0] [--execute]
+  devlog-poster save-draft --platform xiaohongshu|bilibili|douyin --bundle <bundleDir> [--execute]
 `);
+    return;
+  }
+
+  if (command === 'save-draft') {
+    if (!opts.bundleDir) {
+      console.error('Missing required flag: --bundle <bundleDir>');
+      process.exitCode = 1;
+      return;
+    }
+    const result = await savePlatformDraft({
+      platform: opts.platform || 'xiaohongshu',
+      bundleDir: opts.bundleDir,
+      profileDir: opts.profileDir,
+      dryRun: opts.dryRun !== false,
+    });
+    console.log(JSON.stringify(result, null, 2));
     return;
   }
 

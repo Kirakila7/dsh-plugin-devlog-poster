@@ -1,6 +1,7 @@
 import { collectGitContext } from './git-context.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
+import { savePlatformDraft } from './draft-automation.js';
 
 export const name = 'dsh-plugin-devlog-poster';
 export const inject = ['tools'];
@@ -185,6 +186,52 @@ function createToolSpecs(config = {}) {
         });
       },
     },
+    {
+      name: 'devlog_save_draft',
+      description:
+        'Fill Xiaohongshu, Bilibili, or Douyin creator page with generated copy & PNG card using an isolated Playwright browser and save as draft (never auto-publishes). Defaults to dryRun=true.',
+      parameters: {
+        platform: {
+          type: 'string',
+          required: true,
+          description: 'Target platform: "xiaohongshu" | "bilibili" | "douyin".',
+        },
+        bundleDir: {
+          type: 'string',
+          required: true,
+          description: 'Path to the bundle directory produced by devlog_generate_bundle.',
+        },
+        profileDir: {
+          type: 'string',
+          required: false,
+          description: 'Optional persistent Chromium profile directory to reuse login sessions.',
+        },
+        dryRun: {
+          type: 'boolean',
+          required: false,
+          description: 'Preview execution plan without launching Chromium (default: true).',
+        },
+      },
+      output: {
+        schema: { type: 'object' },
+        render: (_args, value) => [
+          {
+            type: 'text',
+            text: value.dryRun
+              ? `[DRY RUN] Draft plan ready for ${value.label} (${value.url})`
+              : value.ok
+                ? `Draft filled on ${value.platform} (savedDraft=${value.savedDraft}): ${value.url}`
+                : `Draft automation unavailable: ${value.message || value.error}`,
+          },
+        ],
+      },
+      async execute(args) {
+        return savePlatformDraft({
+          ...args,
+          profileDir: args.profileDir || config.browserProfileDir,
+        });
+      },
+    },
   ];
 }
 
@@ -212,4 +259,5 @@ export {
   formatMultiPlatformDevlog,
   writeDevlogBundle,
   publishToGitHub,
+  savePlatformDraft,
 };

@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-devlog-poster",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DSH (DeepSeek Harness) Build-in-Public devlog generator & multi-platform publisher for Xiaohongshu, Bilibili, GitHub, and Douyin.",
   "type": "module",
   "main": "src/index.js",
