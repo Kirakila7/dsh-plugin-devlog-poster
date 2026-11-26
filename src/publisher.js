@@ -2,6 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import {
+  fileToDataUri,
+  renderCarouselSlidesSvg,
   renderHorizontalCardSvg,
   renderVerticalCardSvg,
 } from './card-renderer.js';
@@ -22,13 +24,14 @@ function safeJsonForScript(obj) {
   return JSON.stringify(obj).replace(/</g, '\\u003c');
 }
 
-function buildStyleVariants(context, defaultFormatted) {
+function buildStyleVariants(context, defaultFormatted, { heroImageDataUri } = {}) {
   const variants = {};
   for (const styleId of AVAILABLE_STYLES) {
     const formatted =
       styleId === defaultFormatted.meta.style
         ? defaultFormatted
         : formatMultiPlatformDevlog(context, { style: styleId });
+    const slides = renderCarouselSlidesSvg(context, formatted, { heroImageDataUri });
     variants[styleId] = {
       id: styleId,
       name: MODEL_STYLES[styleId].name,
@@ -53,8 +56,9 @@ function buildStyleVariants(context, defaultFormatted) {
           text: formatted.platforms.github.content,
         },
       },
-      verticalSvg: renderVerticalCardSvg(context, formatted),
-      horizontalSvg: renderHorizontalCardSvg(context, formatted),
+      verticalSvg: renderVerticalCardSvg(context, formatted, { heroImageDataUri }),
+      horizontalSvg: renderHorizontalCardSvg(context, formatted, { heroImageDataUri }),
+      slides,
       imagePrompts: buildAllPlatformImagePrompts(context, { style: styleId }),
     };
   }
@@ -214,7 +218,10 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
     <div class="card-box">
       <div class="panel-head">
         <h2>3:4 竖版封面卡（小红书 / 抖音）</h2>
-        <button onclick="downloadPng('svg-vertical', 'vertical', 1080, 1440)">导出 PNG</button>
+        <div class="actions">
+          <label class="link-btn" style="cursor:pointer;">叠加 AI 底图<input type="file" accept="image/*" style="display:none" onchange="applyLocalHero(event)"/></label>
+          <button onclick="downloadPng('svg-vertical', 'vertical', 1080, 1440)">导出 PNG</button>
+        </div>
       </div>
       <div id="svg-vertical">${initial.verticalSvg}</div>
     </div>
@@ -224,6 +231,26 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
         <button onclick="downloadPng('svg-horizontal', 'horizontal', 1600, 900)">导出 PNG</button>
       </div>
       <div id="svg-horizontal">${initial.horizontalSvg}</div>
+    </div>
+  </section>
+
+  <section class="carousel-wrap" style="max-width:1200px;margin:24px auto 0;">
+    <div class="panel-head" style="margin-bottom:14px;">
+      <h2 style="margin:0;color:var(--accent);font-size:18px;">🖼️ 小红书 / 抖音 4 图轮播套图（P1 封面 → P2 更新 → P3 踩坑 → P4 预告）</h2>
+    </div>
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));">
+      ${initial.slides
+        .map(
+          (slide, idx) => `
+      <div class="card-box">
+        <div class="panel-head">
+          <h2>${escapeHtml(slide.label)}</h2>
+          <button onclick="downloadPng('svg-slide-${idx}', 'slide-${idx + 1}', 1080, 1440)">导出 PNG</button>
+        </div>
+        <div id="svg-slide-${idx}">${slide.svg}</div>
+      </div>`
+        )
+        .join('\n')}
     </div>
   </section>
 
@@ -247,11 +274,45 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       document.getElementById('github-text').value = v.platforms.github.text;
       document.getElementById('svg-vertical').innerHTML = v.verticalSvg;
       document.getElementById('svg-horizontal').innerHTML = v.horizontalSvg;
+      v.slides.forEach((slide, idx) => {
+        const box = document.getElementById('svg-slide-' + idx);
+        if (box) box.innerHTML = slide.svg;
+      });
       document.getElementById('prompt-xhs').value = v.imagePrompts.xiaohongshu.prompt;
       document.getElementById('prompt-bili').value = v.imagePrompts.bilibili.prompt;
       document.querySelectorAll('.style-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.style === styleId);
       });
+    }
+
+    function applyLocalHero(evt) {
+      const file = evt.target.files && evt.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUri = reader.result;
+        ['svg-vertical', 'svg-slide-0'].forEach((id) => {
+          const svg = document.querySelector('#' + id + ' svg');
+          if (!svg) return;
+          let img = svg.querySelector('image[data-local-hero="1"]');
+          if (!img) {
+            img = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+            img.setAttribute('data-local-hero', '1');
+            img.setAttribute('x', '0');
+            img.setAttribute('y', '0');
+            img.setAttribute('width', '1080');
+            img.setAttribute('height', '1440');
+            img.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+            img.setAttribute('opacity', '0.40');
+            const firstRect = svg.querySelector('rect');
+            if (firstRect && firstRect.nextSibling) {
+              svg.insertBefore(img, firstRect.nextSibling);
+            }
+          }
+          img.setAttribute('href', dataUri);
+        });
+      };
+      reader.readAsDataURL(file);
     }
 
     async function copyText(id, btn) {
@@ -291,7 +352,11 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
 /**
  * Write all 4 platform drafts, SVG cards, and an interactive multi-style preview.html bundle.
  */
-export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}) {
+export function writeDevlogBundle(
+  context,
+  formatted,
+  { outputDir = 'out', heroImagePath } = {}
+) {
   const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const safeName = context.projectName
     .split('/')
@@ -300,12 +365,20 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
   const bundleDir = resolve(outputDir, `${stamp}-${safeName}`);
   mkdirSync(bundleDir, { recursive: true });
 
-  const variants = buildStyleVariants(context, formatted);
+  const heroImageDataUri = heroImagePath ? fileToDataUri(heroImagePath) : null;
+  const variants = buildStyleVariants(context, formatted, { heroImageDataUri });
   const workReport = formatWorkReport(context, { period: 'daily' });
   const activeStyle = formatted.meta.style || 'big_fat_fish';
   const verticalSvg = variants[activeStyle].verticalSvg;
   const horizontalSvg = variants[activeStyle].horizontalSvg;
+  const slides = variants[activeStyle].slides;
   const previewHtml = buildPreviewHtml(activeStyle, variants, workReport);
+
+  const slideFiles = slides.map((s) => {
+    const filePath = join(bundleDir, `${s.id}.svg`);
+    writeFileSync(filePath, s.svg, 'utf8');
+    return filePath;
+  });
 
   const files = {
     github: join(bundleDir, 'github.md'),
@@ -317,6 +390,7 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
     imagePrompts: join(bundleDir, 'image-prompts.json'),
     cardVertical: join(bundleDir, 'card-vertical.svg'),
     cardHorizontal: join(bundleDir, 'card-horizontal.svg'),
+    slides: slideFiles,
     preview: join(bundleDir, 'preview.html'),
     manifest: join(bundleDir, 'bundle.json'),
   };

@@ -5,6 +5,7 @@ import { publishToGitHub, writeDevlogBundle } from './publisher.js';
 import { savePlatformDraft } from './draft-automation.js';
 import { formatWorkReport, sendWorkReport } from './work-report.js';
 import { generateVisualImage } from './image-gen.js';
+import { loadConfig, saveConfig } from './config.js';
 
 function parseArgs(argv) {
   const [command = 'generate', ...rest] = argv;
@@ -118,6 +119,10 @@ function parseArgs(argv) {
         opts.outputPath = next;
         i++;
         break;
+      case '--hero-image':
+        opts.heroImagePath = next;
+        i++;
+        break;
       case '--execute':
         opts.dryRun = false;
         break;
@@ -142,7 +147,22 @@ Usage:
   devlog-poster save-draft --platform xiaohongshu|bilibili|douyin --bundle <bundleDir> [--execute]
   devlog-poster send-report --channel feishu|dingtalk|wecom|slack|discord|qq_onebot [--period daily|weekly] [--endpoint <url>] [--group-id <id>] [--execute]
   devlog-poster generate-image --platform xiaohongshu|bilibili|douyin|github --provider openai|gemini|volcengine|custom_openai|svg_fallback [--style big_fat_fish] [--execute]
+  devlog-poster config show
+  devlog-poster config set <key> <value>
 `);
+    return;
+  }
+
+  const savedCfg = loadConfig({ repoPath: opts.repoPath || process.cwd() });
+
+  if (command === 'config') {
+    const [, subCmd = 'show', key, value] = process.argv.slice(2);
+    if (subCmd === 'set' && key) {
+      const saved = saveConfig({ [key]: value });
+      console.log(`✅ Saved ${key}=${value} to ${saved.configPath}`);
+      return;
+    }
+    console.log(JSON.stringify(savedCfg, null, 2));
     return;
   }
 
@@ -221,12 +241,13 @@ Usage:
 
   const formatted = formatMultiPlatformDevlog(context, {
     title: opts.title,
-    style: opts.style || 'big_fat_fish',
+    style: opts.style || savedCfg.defaultStyle || 'big_fat_fish',
   });
 
   if (command === 'generate') {
     const { bundleDir, files } = writeDevlogBundle(context, formatted, {
-      outputDir: opts.outputDir || 'out',
+      outputDir: opts.outputDir || savedCfg.outputDir || 'out',
+      heroImagePath: opts.heroImagePath,
     });
     console.log(`✅ Devlog bundle generated: ${bundleDir}`);
     console.log(`   - Preview UI : ${files.preview}`);
@@ -234,8 +255,10 @@ Usage:
     console.log(`   - 小红书     : ${files.xiaohongshu}`);
     console.log(`   - B站        : ${files.bilibili}`);
     console.log(`   - 抖音       : ${files.douyin}`);
+    console.log(`   - Work Daily : ${files.workDailyPlain}`);
     console.log(`   - 3:4 Card   : ${files.cardVertical}`);
     console.log(`   - 16:9 Card  : ${files.cardHorizontal}`);
+    console.log(`   - Carousel   : ${files.slides.length} slides (P1~P4)`);
     return;
   }
 

@@ -8,11 +8,13 @@ import {
   buildImagePrompt,
   generateVisualImage,
 } from './image-gen.js';
+import { loadConfig, saveConfig } from './config.js';
 
 export const name = 'dsh-plugin-devlog-poster';
 export const inject = ['tools'];
 
-function createToolSpecs(config = {}) {
+function createToolSpecs(runtimeConfig = {}) {
+  const config = { ...loadConfig(), ...runtimeConfig };
   const defaultOutputDir = config.outputDir || 'out';
 
   return [
@@ -106,6 +108,11 @@ function createToolSpecs(config = {}) {
           required: false,
           description: 'Directory to write the output bundle (default: "out").',
         },
+        heroImagePath: {
+          type: 'string',
+          required: false,
+          description: 'Optional AI-generated PNG/JPG hero illustration to composite behind card typography.',
+        },
       },
       output: {
         schema: { type: 'object' },
@@ -125,6 +132,7 @@ function createToolSpecs(config = {}) {
         });
         const written = writeDevlogBundle(context, formatted, {
           outputDir: args.outputDir || defaultOutputDir,
+          heroImagePath: args.heroImagePath,
         });
         return {
           ...written,
@@ -459,4 +467,6 @@ export {
   buildImagePrompt,
   buildAllPlatformImagePrompts,
   generateVisualImage,
+  loadConfig,
+  saveConfig,
 };

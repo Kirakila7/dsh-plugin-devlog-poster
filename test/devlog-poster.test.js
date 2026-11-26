@@ -18,6 +18,8 @@ import {
   sendWorkReport,
   buildAllPlatformImagePrompts,
   generateVisualImage,
+  loadConfig,
+  saveConfig,
 } from '../src/index.js';
 import { AVAILABLE_STYLES } from '../src/styles.js';
 import { SUPPORTED_REPORT_CHANNELS } from '../src/work-report.js';
@@ -221,6 +223,49 @@ test('builds platform-adapted image prompts and provider requests for all image 
     assert.equal(res.dryRun, true);
     assert.equal(res.provider, provider);
     assert.ok(res.promptSpec.prompt.includes('Hakimi'));
+  }
+});
+
+test('supports persistent config, 4-slide carousel pack, and AI hero image compositing', () => {
+  const tmpDir = mkdtempSync(join(tmpdir(), 'dsh-devlog-v05-'));
+  try {
+    const cfgPath = join(tmpDir, 'config.json');
+    saveConfig({ defaultStyle: 'gemini', defaultReportChannel: 'qq_onebot' }, { configPath: cfgPath });
+    const loaded = loadConfig({ globalPath: cfgPath, repoPath: tmpDir });
+    assert.equal(loaded.defaultStyle, 'gemini');
+    assert.equal(loaded.defaultReportChannel, 'qq_onebot');
+
+    // Create a minimal 1x1 PNG file to verify SVG <image> hero compositing
+    const heroPng = join(tmpDir, 'hero.png');
+    execFileSync(
+      process.execPath,
+      [
+        '-e',
+        `require('fs').writeFileSync(${JSON.stringify(heroPng)}, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=', 'base64'))`,
+      ]
+    );
+
+    const ctx = collectGitContext({
+      repoPath: tmpDir,
+      projectName: 'Kirakila7/dsh-plugin-devlog-poster',
+      highlights: ['新增 4 图轮播套图', '支持 AI 底图叠加合成'],
+      pitfalls: ['注意 SVG defs ID 去重避免预览冲突'],
+      nextSteps: ['发布 v0.5.0 GitHub Release'],
+    });
+    const formatted = formatMultiPlatformDevlog(ctx, { style: 'big_fat_fish' });
+    const written = writeDevlogBundle(ctx, formatted, {
+      outputDir: join(tmpDir, 'out'),
+      heroImagePath: heroPng,
+    });
+
+    assert.equal(written.files.slides.length, 4);
+    for (const slidePath of written.files.slides) {
+      assert.ok(existsSync(slidePath));
+    }
+    const coverSvg = readFileSync(written.files.cardVertical, 'utf8');
+    assert.ok(coverSvg.includes('data:image/png;base64,'));
+  } finally {
+    rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 

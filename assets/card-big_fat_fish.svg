@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs>
+    <linearGradient id="bgV_big_fat_fish" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#061326"/>
+      <stop offset="52%" stop-color="#0C2D57"/>
+      <stop offset="100%" stop-color="#07182E"/>
+    </linearGradient>
+    <linearGradient id="badgeV_big_fat_fish" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#60A5FA"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1440" fill="url(#bgV_big_fat_fish)"/>
+  
+  <circle cx="940" cy="210" r="240" fill="#38BDF8" opacity="0.10"/>
+  <circle cx="140" cy="1260" r="260" fill="#60A5FA" opacity="0.10"/>
+
+  <rect x="84" y="92" width="440" height="56" rx="28" fill="url(#badgeV_big_fat_fish)"/>
+  <text x="116" y="130" fill="#061326" font-size="27" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">🐳 大肥鱼值班日志 · 2026.11.26</text>
+
+  
+  <g transform="translate(710, 88) scale(1.1)">
+    <path d="M92 22 C86 -6, 62 -10, 56 6" fill="none" stroke="#7DD3FC" stroke-width="6" stroke-linecap="round"/>
+    <path d="M98 22 C106 -6, 130 -10, 136 6" fill="none" stroke="#BAE6FD" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="18" cy="48" r="8" fill="none" stroke="#7DD3FC" stroke-width="3" opacity="0.8"/>
+    <circle cx="34" cy="24" r="5" fill="#BAE6FD" opacity="0.7"/>
+    <path d="M188 92 C218 68, 240 58, 246 74 C250 86, 232 98, 224 102 C238 110, 248 124, 240 134 C230 146, 208 130, 184 114 Z" fill="#2563EB"/>
+    <ellipse cx="114" cy="100" rx="88" ry="66" fill="#3B82F6"/>
+    <ellipse cx="102" cy="64" rx="54" ry="20" fill="#60A5FA" opacity="0.55"/>
+    <path d="M38 118 C64 156, 152 162, 186 122 C154 134, 80 136, 38 118 Z" fill="#E0F2FE"/>
+    <path d="M114 118 C128 142, 156 144, 156 126 C156 114, 134 108, 114 118 Z" fill="#1D4ED8"/>
+    <ellipse cx="58" cy="108" rx="10" ry="6" fill="#F472B6" opacity="0.45"/>
+    <circle cx="62" cy="90" r="8" fill="#0F172A"/>
+    <circle cx="59" cy="87" r="2.8" fill="#FFFFFF"/>
+    <path d="M36 106 Q48 118 62 110" fill="none" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round"/>
+  </g>
+
+  <text x="84" y="274" fill="#FFFFFF" font-size="66" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster</text>
+  <text x="84" y="344" fill="#7DD3FC" font-size="31" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">弱小，可怜，但能吃 · 掏出小本本认真汇报</text>
+
+  <rect x="84" y="406" width="912" height="92" rx="20" fill="rgba(14,165,233,0.18)" stroke="rgba(125,211,252,0.45)" stroke-width="2"/>
+  <text x="120" y="464" fill="#F0F9FF" font-size="31" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">改动 8 个文件（+620 / -42 行）</text>
+
+  
+  <rect x="84" y="550" width="912" height="122" rx="24" fill="rgba(56,189,248,0.10)" stroke="rgba(125,211,252,0.28)" stroke-width="2"/>
+  <circle cx="118" cy="590" r="13" fill="#38BDF8"/>
+  <text x="150" y="600" fill="#F0F9FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">一稿四吃：GitHub / 小红书 / B站</text>
+<text x="150" y="640" fill="#F0F9FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"> / 抖音 + 工作日报周报</text>
+
+  <rect x="84" y="700" width="912" height="122" rx="24" fill="rgba(56,189,248,0.10)" stroke="rgba(125,211,252,0.28)" stroke-width="2"/>
+  <circle cx="118" cy="740" r="13" fill="#38BDF8"/>
+  <text x="150" y="750" fill="#F0F9FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">内置四大 AI 娘文风与萌系 Q 版漫画生图</text>
+<text x="150" y="790" fill="#F0F9FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">提示词模板</text>
+
+  <rect x="84" y="850" width="912" height="122" rx="24" fill="rgba(56,189,248,0.10)" stroke="rgba(125,211,252,0.28)" stroke-width="2"/>
+  <circle cx="118" cy="890" r="13" fill="#38BDF8"/>
+  <text x="150" y="900" fill="#F0F9FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">支持 4 图轮播套图、AI 底图叠加与 6 </text>
+<text x="150" y="940" fill="#F0F9FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">大办公渠道 Webhook</text>
+  
+  <rect x="84" y="1170" width="912" height="110" rx="22" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.38)" stroke-width="2"/>
+  <text x="120" y="1216" fill="#FDE68A" font-size="26" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">⚠️ 避坑笔记</text>
+  <text x="120" y="1256" fill="#FEF3C7" font-size="28" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">把大需求拆成可验证小闭环，零外部依赖即可跑通</text>
+
+  <text x="84" y="1364" fill="#7DD3FC" opacity="0.78" font-size="25" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · 大肥鱼（DeepSeek · 科普干饭娘） · Branch: main</text>
+</svg>

@@ -8,11 +8,17 @@
 - **B站**：图文动态 + 60 秒口播视频大纲 + 16:9 横版进度卡片
 - **抖音**：极简图文笔记 + 30 秒快节奏口播脚本 + 3:4 竖版封面卡片
 
-### 内置 4 套模型风格（文案 + 卡片配色与矢量徽章联动）
-- `big_fat_fish`（默认）：🐳 蓝色大肥鱼（DeepSeek / DSH 社区风）
-- `gemini`：✦ Gemini 星云风
-- `chatgpt`：🟢 ChatGPT 极简效率风
-- `claude`：✴ Claude 暖陶土书卷风
+### 内置 4 套模型风格（文案 + 卡片配色与矢量徽章 + Q 版 AI 娘生图 Prompt 全链路联动）
+- `big_fat_fish`（默认）：🐳 **大肥鱼（DeepSeek）** — 弱小、可怜、但能吃，认真掏小本本科普
+- `gemini`：✦ **哈基米（Gemini）** — 哈基，基米，哈基米！元气猫耳接梗播报
+- `chatgpt`：🟢 **白龙娘（ChatGPT）** — 神秘、强大、但偶发降智，一本正经交付复盘
+- `claude`：✴ **克劳德大小姐（Claude）** — 高冷、知性、抱书克制（附防风控祈祷）
+
+| 🐳 大肥鱼（DeepSeek） | ✦ 哈基米（Gemini） |
+| :---: | :---: |
+| <img src="./assets/card-big_fat_fish.svg" width="320" alt="Big Fat Fish Card"/> | <img src="./assets/card-gemini.svg" width="320" alt="Gemini Hakimi Card"/> |
+| 🟢 白龙娘（ChatGPT） | ✴ 克劳德大小姐（Claude） |
+| <img src="./assets/card-chatgpt.svg" width="320" alt="ChatGPT Card"/> | <img src="./assets/card-claude.svg" width="320" alt="Claude Card"/> |
 
 ---
 

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs>
+    <linearGradient id="bgV_chatgpt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#071915"/>
+      <stop offset="52%" stop-color="#0D2F27"/>
+      <stop offset="100%" stop-color="#061310"/>
+    </linearGradient>
+    <linearGradient id="badgeV_chatgpt" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#10A37F"/>
+      <stop offset="100%" stop-color="#34D399"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1440" fill="url(#bgV_chatgpt)"/>
+  
+  <circle cx="940" cy="210" r="240" fill="#10A37F" opacity="0.10"/>
+  <circle cx="140" cy="1260" r="260" fill="#34D399" opacity="0.10"/>
+
+  <rect x="84" y="92" width="440" height="56" rx="28" fill="url(#badgeV_chatgpt)"/>
+  <text x="116" y="130" fill="#041410" font-size="27" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">● ChatGPT 交付简报 · 2026.11.26</text>
+
+  
+  <g transform="translate(710, 88) scale(1.1)">
+    <circle cx="112" cy="96" r="70" fill="#10A37F" opacity="0.18"/>
+    <g fill="none" stroke="#34D399" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" transform="translate(112, 96)">
+      <polygon points="0,-54 47,-27 47,27 0,54 -47,27 -47,-27"/>
+      <polygon points="0,-28 24,-14 24,14 0,28 -24,14 -24,-14" stroke="#A7F3D0" stroke-width="6"/>
+      <line x1="0" y1="-54" x2="0" y2="-28"/>
+      <line x1="47" y1="-27" x2="24" y2="-14"/>
+      <line x1="47" y1="27" x2="24" y2="14"/>
+      <line x1="0" y1="54" x2="0" y2="28"/>
+      <line x1="-47" y1="27" x2="-24" y2="14"/>
+      <line x1="-47" y1="-27" x2="-24" y2="-14"/>
+    </g>
+  </g>
+
+  <text x="84" y="274" fill="#FFFFFF" font-size="66" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster</text>
+  <text x="84" y="344" fill="#6EE7B7" font-size="31" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">神秘，强大，但偶尔降智 · 一本正经结构化复盘</text>
+
+  <rect x="84" y="406" width="912" height="92" rx="20" fill="rgba(16,163,127,0.20)" stroke="rgba(110,231,183,0.45)" stroke-width="2"/>
+  <text x="120" y="464" fill="#ECFDF5" font-size="31" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">改动 8 个文件（+620 / -42 行）</text>
+
+  
+  <rect x="84" y="550" width="912" height="122" rx="24" fill="rgba(16,163,127,0.12)" stroke="rgba(52,211,153,0.32)" stroke-width="2"/>
+  <circle cx="118" cy="590" r="13" fill="#10A37F"/>
+  <text x="150" y="600" fill="#ECFDF5" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">一稿四吃：GitHub / 小红书 / B站</text>
+<text x="150" y="640" fill="#ECFDF5" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"> / 抖音 + 工作日报周报</text>
+
+  <rect x="84" y="700" width="912" height="122" rx="24" fill="rgba(16,163,127,0.12)" stroke="rgba(52,211,153,0.32)" stroke-width="2"/>
+  <circle cx="118" cy="740" r="13" fill="#10A37F"/>
+  <text x="150" y="750" fill="#ECFDF5" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">内置四大 AI 娘文风与萌系 Q 版漫画生图</text>
+<text x="150" y="790" fill="#ECFDF5" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">提示词模板</text>
+
+  <rect x="84" y="850" width="912" height="122" rx="24" fill="rgba(16,163,127,0.12)" stroke="rgba(52,211,153,0.32)" stroke-width="2"/>
+  <circle cx="118" cy="890" r="13" fill="#10A37F"/>
+  <text x="150" y="900" fill="#ECFDF5" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">支持 4 图轮播套图、AI 底图叠加与 6 </text>
+<text x="150" y="940" fill="#ECFDF5" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">大办公渠道 Webhook</text>
+  
+  <rect x="84" y="1170" width="912" height="110" rx="22" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.38)" stroke-width="2"/>
+  <text x="120" y="1216" fill="#FDE68A" font-size="26" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">⚠️ 避坑笔记</text>
+  <text x="120" y="1256" fill="#FEF3C7" font-size="28" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">把大需求拆成可验证小闭环，零外部依赖即可跑通</text>
+
+  <text x="84" y="1364" fill="#6EE7B7" opacity="0.78" font-size="25" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · 白龙娘（ChatGPT · 强大但偶发降智） · Branch: main</text>
+</svg>

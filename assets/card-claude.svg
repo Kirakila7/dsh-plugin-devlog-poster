@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs>
+    <linearGradient id="bgV_claude" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1C1410"/>
+      <stop offset="52%" stop-color="#2D1F18"/>
+      <stop offset="100%" stop-color="#16100C"/>
+    </linearGradient>
+    <linearGradient id="badgeV_claude" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#D97757"/>
+      <stop offset="100%" stop-color="#F4A261"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1440" fill="url(#bgV_claude)"/>
+  
+  <circle cx="940" cy="210" r="240" fill="#D97757" opacity="0.10"/>
+  <circle cx="140" cy="1260" r="260" fill="#F4A261" opacity="0.10"/>
+
+  <rect x="84" y="92" width="440" height="56" rx="28" fill="url(#badgeV_claude)"/>
+  <text x="116" y="130" fill="#1C1410" font-size="27" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">✴ Claude 工程手记 · 2026.11.26</text>
+
+  
+  <g transform="translate(710, 88) scale(1.1)">
+    <circle cx="112" cy="96" r="70" fill="#D97757" opacity="0.18"/>
+    <g transform="translate(112, 96)" stroke="#F4A261" stroke-width="11" stroke-linecap="round">
+      <line x1="0" y1="-54" x2="0" y2="54"/>
+      <line x1="-54" y1="0" x2="54" y2="0"/>
+      <line x1="-38" y1="-38" x2="38" y2="38"/>
+      <line x1="38" y1="-38" x2="-38" y2="38"/>
+      <circle cx="0" cy="0" r="14" fill="#D97757" stroke="none"/>
+    </g>
+  </g>
+
+  <text x="84" y="274" fill="#FFFFFF" font-size="66" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster</text>
+  <text x="84" y="344" fill="#F3C6A5" font-size="31" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">高冷，知性，但封号 · 克制优雅的慢思考记录</text>
+
+  <rect x="84" y="406" width="912" height="92" rx="20" fill="rgba(217,119,87,0.20)" stroke="rgba(243,198,165,0.42)" stroke-width="2"/>
+  <text x="120" y="464" fill="#FDF6F0" font-size="31" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">改动 8 个文件（+620 / -42 行）</text>
+
+  
+  <rect x="84" y="550" width="912" height="122" rx="24" fill="rgba(217,119,87,0.12)" stroke="rgba(244,162,97,0.32)" stroke-width="2"/>
+  <circle cx="118" cy="590" r="13" fill="#D97757"/>
+  <text x="150" y="600" fill="#FDF6F0" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">一稿四吃：GitHub / 小红书 / B站</text>
+<text x="150" y="640" fill="#FDF6F0" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"> / 抖音 + 工作日报周报</text>
+
+  <rect x="84" y="700" width="912" height="122" rx="24" fill="rgba(217,119,87,0.12)" stroke="rgba(244,162,97,0.32)" stroke-width="2"/>
+  <circle cx="118" cy="740" r="13" fill="#D97757"/>
+  <text x="150" y="750" fill="#FDF6F0" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">内置四大 AI 娘文风与萌系 Q 版漫画生图</text>
+<text x="150" y="790" fill="#FDF6F0" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">提示词模板</text>
+
+  <rect x="84" y="850" width="912" height="122" rx="24" fill="rgba(217,119,87,0.12)" stroke="rgba(244,162,97,0.32)" stroke-width="2"/>
+  <circle cx="118" cy="890" r="13" fill="#D97757"/>
+  <text x="150" y="900" fill="#FDF6F0" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">支持 4 图轮播套图、AI 底图叠加与 6 </text>
+<text x="150" y="940" fill="#FDF6F0" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">大办公渠道 Webhook</text>
+  
+  <rect x="84" y="1170" width="912" height="110" rx="22" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.38)" stroke-width="2"/>
+  <text x="120" y="1216" fill="#FDE68A" font-size="26" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">⚠️ 避坑笔记</text>
+  <text x="120" y="1256" fill="#FEF3C7" font-size="28" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">把大需求拆成可验证小闭环，零外部依赖即可跑通</text>
+
+  <text x="84" y="1364" fill="#F3C6A5" opacity="0.78" font-size="25" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · 克劳德大小姐（Claude · 高冷知性但封号） · Branch: main</text>
+</svg>

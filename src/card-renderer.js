@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { extname } from 'node:path';
 import { resolveStyle } from './styles.js';
 
 function escapeXml(str = '') {
@@ -23,19 +25,35 @@ function wrapText(text, maxChars) {
   return lines;
 }
 
-function renderMascotSvg(styleId, x, y, scale = 1) {
+/**
+ * Convert a local PNG/JPG/WebP image path into an inline data URI for SVG compositing.
+ */
+export function fileToDataUri(imagePath) {
+  if (!imagePath || !existsSync(imagePath)) return null;
+  const ext = extname(imagePath).toLowerCase();
+  const mime =
+    ext === '.jpg' || ext === '.jpeg'
+      ? 'image/jpeg'
+      : ext === '.webp'
+        ? 'image/webp'
+        : 'image/png';
+  const b64 = readFileSync(imagePath).toString('base64');
+  return `data:${mime};base64,${b64}`;
+}
+
+function renderMascotSvg(styleId, x, y, scale = 1, uid = 'v') {
   if (styleId === 'gemini') {
     return `
   <g transform="translate(${x}, ${y}) scale(${scale})">
     <defs>
-      <linearGradient id="gemStar" x1="0" y1="0" x2="1" y2="1">
+      <linearGradient id="gemStar_${uid}" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#60A5FA"/>
         <stop offset="55%" stop-color="#A78BFA"/>
         <stop offset="100%" stop-color="#F472B6"/>
       </linearGradient>
     </defs>
     <circle cx="110" cy="95" r="72" fill="#818CF8" opacity="0.16"/>
-    <path d="M110 18 C118 68, 142 88, 192 95 C142 102, 118 122, 110 172 C102 122, 78 102, 28 95 C78 88, 102 68, 110 18 Z" fill="url(#gemStar)"/>
+    <path d="M110 18 C118 68, 142 88, 192 95 C142 102, 118 122, 110 172 C102 122, 78 102, 28 95 C78 88, 102 68, 110 18 Z" fill="url(#gemStar_${uid})"/>
     <path d="M188 26 C191 42, 198 49, 214 52 C198 55, 191 62, 188 78 C185 62, 178 55, 162 52 C178 49, 185 42, 188 26 Z" fill="#C4B5FD"/>
   </g>`;
   }
@@ -71,7 +89,6 @@ function renderMascotSvg(styleId, x, y, scale = 1) {
   </g>`;
   }
 
-  // Default: Big Fat Fish (蓝色大肥鱼)
   return `
   <g transform="translate(${x}, ${y}) scale(${scale})">
     <path d="M92 22 C86 -6, 62 -10, 56 6" fill="none" stroke="#7DD3FC" stroke-width="6" stroke-linecap="round"/>
@@ -90,10 +107,24 @@ function renderMascotSvg(styleId, x, y, scale = 1) {
   </g>`;
 }
 
+function renderHeroBackdropLayer(heroImageDataUri, width, height, uid) {
+  if (!heroImageDataUri) return '';
+  return `
+  <image href="${heroImageDataUri}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice" opacity="0.42"/>
+  <defs>
+    <linearGradient id="heroScrim_${uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.35"/>
+      <stop offset="55%" stop-color="#000000" stop-opacity="0.58"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.82"/>
+    </linearGradient>
+  </defs>
+  <rect width="${width}" height="${height}" fill="url(#heroScrim_${uid})"/>`;
+}
+
 /**
- * Render a 3:4 vertical Devlog cover card (1080x1440) for Xiaohongshu & Douyin.
+ * Render a 3:4 vertical Devlog cover card (1080x1440) with optional AI-generated hero image compositing.
  */
-export function renderVerticalCardSvg(context, formatted) {
+export function renderVerticalCardSvg(context, formatted, { heroImageDataUri } = {}) {
   const theme = resolveStyle(formatted?.meta?.style);
   const project = escapeXml(context.projectName.split('/').pop() || context.projectName);
   const dateStr = escapeXml(formatted.meta.dateStr);
@@ -123,7 +154,7 @@ export function renderVerticalCardSvg(context, formatted) {
 
   const pitfallBlock = pitfall
     ? `
-  <rect x="84" y="1170" width="912" height="110" rx="22" fill="rgba(251,191,36,0.10)" stroke="rgba(251,191,36,0.35)" stroke-width="2"/>
+  <rect x="84" y="1170" width="912" height="110" rx="22" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.38)" stroke-width="2"/>
   <text x="120" y="1216" fill="#FDE68A" font-size="26" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">⚠️ 避坑笔记</text>
   <text x="120" y="1256" fill="#FEF3C7" font-size="28" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(pitfall.length > 28 ? `${pitfall.slice(0, 28)}…` : pitfall)}</text>`
     : '';
@@ -131,27 +162,28 @@ export function renderVerticalCardSvg(context, formatted) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
   <defs>
-    <linearGradient id="bgV" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bgV_${theme.id}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="${theme.bgStops[0]}"/>
       <stop offset="52%" stop-color="${theme.bgStops[1]}"/>
       <stop offset="100%" stop-color="${theme.bgStops[2]}"/>
     </linearGradient>
-    <linearGradient id="badgeV" x1="0" y1="0" x2="1" y2="0">
+    <linearGradient id="badgeV_${theme.id}" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="${theme.accentFrom}"/>
       <stop offset="100%" stop-color="${theme.accentTo}"/>
     </linearGradient>
   </defs>
-  <rect width="1080" height="1440" fill="url(#bgV)"/>
+  <rect width="1080" height="1440" fill="url(#bgV_${theme.id})"/>
+  ${renderHeroBackdropLayer(heroImageDataUri, 1080, 1440, `v_${theme.id}`)}
   <circle cx="940" cy="210" r="240" fill="${theme.accentFrom}" opacity="0.10"/>
   <circle cx="140" cy="1260" r="260" fill="${theme.accentTo}" opacity="0.10"/>
 
-  <rect x="84" y="92" width="420" height="56" rx="28" fill="url(#badgeV)"/>
+  <rect x="84" y="92" width="440" height="56" rx="28" fill="url(#badgeV_${theme.id})"/>
   <text x="116" y="130" fill="${theme.badgeTextColor}" font-size="27" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.badgeLabel)} · ${dateStr}</text>
 
-  ${renderMascotSvg(theme.id, 710, 88, 1.1)}
+  ${renderMascotSvg(theme.id, 710, 88, 1.1, `v_${theme.id}`)}
 
-  <text x="84" y="274" fill="#FFFFFF" font-size="68" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${project}</text>
-  <text x="84" y="344" fill="${theme.subtitleColor}" font-size="32" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.subtitle)}</text>
+  <text x="84" y="274" fill="#FFFFFF" font-size="66" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${project}</text>
+  <text x="84" y="344" fill="${theme.subtitleColor}" font-size="31" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.subtitle)}</text>
 
   <rect x="84" y="406" width="912" height="92" rx="20" fill="${theme.statsFill}" stroke="${theme.statsStroke}" stroke-width="2"/>
   <text x="120" y="464" fill="${theme.textColor}" font-size="31" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${statsLine}</text>
@@ -159,7 +191,7 @@ export function renderVerticalCardSvg(context, formatted) {
   ${bulletBlocks}
   ${pitfallBlock}
 
-  <text x="84" y="1364" fill="${theme.subtitleColor}" opacity="0.72" font-size="25" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · Style: ${escapeXml(theme.name)} · Branch: ${escapeXml(context.branch || 'main')}</text>
+  <text x="84" y="1364" fill="${theme.subtitleColor}" opacity="0.78" font-size="25" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · ${escapeXml(theme.name)} · Branch: ${escapeXml(context.branch || 'main')}</text>
 </svg>
 `;
 }
@@ -167,7 +199,7 @@ export function renderVerticalCardSvg(context, formatted) {
 /**
  * Render a 16:9 horizontal Devlog summary card (1600x900) for Bilibili & GitHub.
  */
-export function renderHorizontalCardSvg(context, formatted) {
+export function renderHorizontalCardSvg(context, formatted, { heroImageDataUri } = {}) {
   const theme = resolveStyle(formatted?.meta?.style);
   const project = escapeXml(context.projectName);
   const dateStr = escapeXml(formatted.meta.dateStr);
@@ -190,17 +222,18 @@ export function renderHorizontalCardSvg(context, formatted) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
   <defs>
-    <linearGradient id="bgH" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bgH_${theme.id}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="${theme.bgStops[0]}"/>
       <stop offset="60%" stop-color="${theme.bgStops[1]}"/>
       <stop offset="100%" stop-color="${theme.bgStops[2]}"/>
     </linearGradient>
   </defs>
-  <rect width="1600" height="900" fill="url(#bgH)"/>
+  <rect width="1600" height="900" fill="url(#bgH_${theme.id})"/>
+  ${renderHeroBackdropLayer(heroImageDataUri, 1600, 900, `h_${theme.id}`)}
   <circle cx="1430" cy="150" r="240" fill="${theme.accentFrom}" opacity="0.12"/>
   <circle cx="160" cy="820" r="220" fill="${theme.accentTo}" opacity="0.10"/>
 
-  ${renderMascotSvg(theme.id, 1240, 68, 1.05)}
+  ${renderMascotSvg(theme.id, 1240, 68, 1.05, `h_${theme.id}`)}
 
   <text x="96" y="112" fill="${theme.accentFrom}" font-size="28" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.badgeLabel)} · ${dateStr} · ${escapeXml(context.branch || 'main')}</text>
   <text x="96" y="196" fill="#FFFFFF" font-size="62" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${project}</text>
@@ -208,7 +241,137 @@ export function renderHorizontalCardSvg(context, formatted) {
 
   ${itemsSvg}
 
-  <text x="96" y="846" fill="${theme.subtitleColor}" opacity="0.72" font-size="24" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · ${escapeXml(theme.footerTag)}</text>
+  <text x="96" y="846" fill="${theme.subtitleColor}" opacity="0.78" font-size="24" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · ${escapeXml(theme.footerTag)}</text>
 </svg>
 `;
+}
+
+function renderSlideShell({ theme, uid, pageTag, heading, bodySvg, footer, heroImageDataUri }) {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs>
+    <linearGradient id="slideBg_${uid}" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="${theme.bgStops[0]}"/>
+      <stop offset="55%" stop-color="${theme.bgStops[1]}"/>
+      <stop offset="100%" stop-color="${theme.bgStops[2]}"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1440" fill="url(#slideBg_${uid})"/>
+  ${renderHeroBackdropLayer(heroImageDataUri, 1080, 1440, `s_${uid}`)}
+  <rect x="84" y="88" width="210" height="50" rx="25" fill="${theme.accentFrom}"/>
+  <text x="116" y="122" fill="${theme.badgeTextColor}" font-size="25" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(pageTag)}</text>
+  <text x="84" y="242" fill="#FFFFFF" font-size="58" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(heading)}</text>
+  ${bodySvg}
+  <text x="84" y="1364" fill="${theme.subtitleColor}" opacity="0.75" font-size="24" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(footer)}</text>
+</svg>
+`;
+}
+
+/**
+ * Render a 4-slide 3:4 carousel pack tailored for Xiaohongshu / Douyin multi-image posts:
+ * P1 Cover -> P2 Core Updates -> P3 Pitfalls & Lessons -> P4 Next Up & CTA.
+ */
+export function renderCarouselSlidesSvg(context, formatted, { heroImageDataUri } = {}) {
+  const theme = resolveStyle(formatted?.meta?.style);
+  const project = context.projectName.split('/').pop() || context.projectName;
+  const footer = `${theme.badgeLabel} · ${project} · ${formatted.meta.dateStr}`;
+  const points = (context.highlights?.length > 0
+    ? context.highlights
+    : context.commits?.map((c) => c.subject) || ['阶段性进展与闭环整理']
+  ).slice(0, 5);
+  const pitfalls = context.pitfalls?.length > 0 ? context.pitfalls : ['把大需求切小，先保证单次闭环可验证'];
+  const nextSteps = context.nextSteps?.length > 0 ? context.nextSteps : ['持续迭代并欢迎评论区提需求'];
+
+  // P1 Cover (reuses rich vertical cover)
+  const slide1 = renderVerticalCardSvg(context, formatted, { heroImageDataUri });
+
+  // P2 Core Updates
+  const p2Items = points
+    .map((item, idx) => {
+      const y = 320 + idx * 185;
+      const lines = wrapText(item, 21).slice(0, 3);
+      return `
+  <rect x="84" y="${y}" width="912" height="156" rx="24" fill="${theme.cardFill}" stroke="${theme.cardStroke}" stroke-width="2"/>
+  <text x="122" y="${y + 52}" fill="${theme.accentFrom}" font-size="26" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">STEP 0${idx + 1}</text>
+  ${lines
+    .map(
+      (l, li) =>
+        `<text x="122" y="${y + 98 + li * 38}" fill="${theme.textColor}" font-size="32" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(l)}</text>`
+    )
+    .join('\n')}`;
+    })
+    .join('\n');
+
+  const slide2 = renderSlideShell({
+    theme,
+    uid: `p2_${theme.id}`,
+    pageTag: 'P2 / 4 · 更新',
+    heading: '本轮核心更新清单',
+    bodySvg: p2Items,
+    footer,
+  });
+
+  // P3 Pitfalls & Changed Files
+  const p3Pitfalls = pitfalls
+    .slice(0, 3)
+    .map((p, idx) => {
+      const y = 320 + idx * 210;
+      const lines = wrapText(p, 21).slice(0, 3);
+      return `
+  <rect x="84" y="${y}" width="912" height="178" rx="24" fill="rgba(251,191,36,0.10)" stroke="rgba(251,191,36,0.36)" stroke-width="2"/>
+  <text x="122" y="${y + 52}" fill="#FDE68A" font-size="26" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">⚠️ 踩坑记录 #${idx + 1}</text>
+  ${lines
+    .map(
+      (l, li) =>
+        `<text x="122" y="${y + 98 + li * 38}" fill="#FEF3C7" font-size="32" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(l)}</text>`
+    )
+    .join('\n')}`;
+    })
+    .join('\n');
+
+  const slide3 = renderSlideShell({
+    theme,
+    uid: `p3_${theme.id}`,
+    pageTag: 'P3 / 4 · 踩坑',
+    heading: '真实踩坑与取舍',
+    bodySvg: p3Pitfalls,
+    footer,
+  });
+
+  // P4 Next Up & Community CTA
+  const p4Next = nextSteps
+    .slice(0, 3)
+    .map((n, idx) => {
+      const y = 340 + idx * 170;
+      const lines = wrapText(n, 21).slice(0, 2);
+      return `
+  <rect x="84" y="${y}" width="912" height="140" rx="24" fill="${theme.cardFill}" stroke="${theme.cardStroke}" stroke-width="2"/>
+  <text x="122" y="${y + 60}" fill="${theme.textColor}" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.bulletIcon)} ${escapeXml(lines[0] || '')}</text>
+  ${lines[1] ? `<text x="164" y="${y + 104}" fill="${theme.textColor}" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(lines[1])}</text>` : ''}`;
+    })
+    .join('\n');
+
+  const p4Cta = `
+  ${p4Next}
+  <rect x="84" y="920" width="912" height="260" rx="28" fill="${theme.statsFill}" stroke="${theme.statsStroke}" stroke-width="2"/>
+  ${renderMascotSvg(theme.id, 720, 946, 0.92, `p4_${theme.id}`)}
+  <text x="126" y="1008" fill="#FFFFFF" font-size="40" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">欢迎评论区点菜 / 催更</text>
+  <text x="126" y="1072" fill="${theme.subtitleColor}" font-size="30" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">开源仓库：${escapeXml(context.projectName)}</text>
+  <text x="126" y="1126" fill="${theme.textColor}" font-size="27" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh plugin add github:Kirakila7/dsh-plugin-devlog-poster</text>`;
+
+  const slide4 = renderSlideShell({
+    theme,
+    uid: `p4_${theme.id}`,
+    pageTag: 'P4 / 4 · 预告',
+    heading: '下一步计划',
+    bodySvg: p4Cta,
+    footer,
+  });
+
+  return [
+    { id: 'slide-1-cover', label: 'P1 封面卡', svg: slide1 },
+    { id: 'slide-2-changes', label: 'P2 核心更新', svg: slide2 },
+    { id: 'slide-3-pitfalls', label: 'P3 真实踩坑', svg: slide3 },
+    { id: 'slide-4-next', label: 'P4 预告与互动', svg: slide4 },
+  ];
 }

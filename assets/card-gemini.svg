@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <defs>
+    <linearGradient id="bgV_gemini" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0B0A1F"/>
+      <stop offset="52%" stop-color="#1E1B4B"/>
+      <stop offset="100%" stop-color="#171133"/>
+    </linearGradient>
+    <linearGradient id="badgeV_gemini" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#60A5FA"/>
+      <stop offset="100%" stop-color="#C084FC"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1440" fill="url(#bgV_gemini)"/>
+  
+  <circle cx="940" cy="210" r="240" fill="#60A5FA" opacity="0.10"/>
+  <circle cx="140" cy="1260" r="260" fill="#C084FC" opacity="0.10"/>
+
+  <rect x="84" y="92" width="440" height="56" rx="28" fill="url(#badgeV_gemini)"/>
+  <text x="116" y="130" fill="#0B0A1F" font-size="27" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">✦ 哈基米更新日志 · 2026.11.26</text>
+
+  
+  <g transform="translate(710, 88) scale(1.1)">
+    <defs>
+      <linearGradient id="gemStar_v_gemini" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#60A5FA"/>
+        <stop offset="55%" stop-color="#A78BFA"/>
+        <stop offset="100%" stop-color="#F472B6"/>
+      </linearGradient>
+    </defs>
+    <circle cx="110" cy="95" r="72" fill="#818CF8" opacity="0.16"/>
+    <path d="M110 18 C118 68, 142 88, 192 95 C142 102, 118 122, 110 172 C102 122, 78 102, 28 95 C78 88, 102 68, 110 18 Z" fill="url(#gemStar_v_gemini)"/>
+    <path d="M188 26 C191 42, 198 49, 214 52 C198 55, 191 62, 188 78 C185 62, 178 55, 162 52 C178 49, 185 42, 188 26 Z" fill="#C4B5FD"/>
+  </g>
+
+  <text x="84" y="274" fill="#FFFFFF" font-size="66" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster</text>
+  <text x="84" y="344" fill="#C4B5FD" font-size="31" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">哈基，基米，哈基米！· 元气整活开发播报 🎵</text>
+
+  <rect x="84" y="406" width="912" height="92" rx="20" fill="rgba(96,165,250,0.16)" stroke="rgba(167,139,250,0.45)" stroke-width="2"/>
+  <text x="120" y="464" fill="#F5F3FF" font-size="31" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">改动 8 个文件（+620 / -42 行）</text>
+
+  
+  <rect x="84" y="550" width="912" height="122" rx="24" fill="rgba(139,92,246,0.13)" stroke="rgba(192,132,252,0.34)" stroke-width="2"/>
+  <circle cx="118" cy="590" r="13" fill="#A78BFA"/>
+  <text x="150" y="600" fill="#F5F3FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">一稿四吃：GitHub / 小红书 / B站</text>
+<text x="150" y="640" fill="#F5F3FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif"> / 抖音 + 工作日报周报</text>
+
+  <rect x="84" y="700" width="912" height="122" rx="24" fill="rgba(139,92,246,0.13)" stroke="rgba(192,132,252,0.34)" stroke-width="2"/>
+  <circle cx="118" cy="740" r="13" fill="#A78BFA"/>
+  <text x="150" y="750" fill="#F5F3FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">内置四大 AI 娘文风与萌系 Q 版漫画生图</text>
+<text x="150" y="790" fill="#F5F3FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">提示词模板</text>
+
+  <rect x="84" y="850" width="912" height="122" rx="24" fill="rgba(139,92,246,0.13)" stroke="rgba(192,132,252,0.34)" stroke-width="2"/>
+  <circle cx="118" cy="890" r="13" fill="#A78BFA"/>
+  <text x="150" y="900" fill="#F5F3FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">支持 4 图轮播套图、AI 底图叠加与 6 </text>
+<text x="150" y="940" fill="#F5F3FF" font-size="33" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">大办公渠道 Webhook</text>
+  
+  <rect x="84" y="1170" width="912" height="110" rx="22" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.38)" stroke-width="2"/>
+  <text x="120" y="1216" fill="#FDE68A" font-size="26" font-weight="700" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">⚠️ 避坑笔记</text>
+  <text x="120" y="1256" fill="#FEF3C7" font-size="28" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">把大需求拆成可验证小闭环，零外部依赖即可跑通</text>
+
+  <text x="84" y="1364" fill="#C4B5FD" opacity="0.78" font-size="25" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · 哈基米（Gemini · 元气接梗娘） · Branch: main</text>
+</svg>
