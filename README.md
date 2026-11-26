@@ -32,6 +32,7 @@ dsh plugin --profile web add github:Kirakila7/dsh-plugin-devlog-poster
 | `devlog_generate_bundle` | 一键生成 GitHub / 小红书 / B站 / 抖音文案、双比例 SVG 卡片与支持 4 风格实时换肤的 `preview.html` |
 | `devlog_publish_github` | 追加写入 `DEVLOG.md` 或调用 `gh release create` 发布（默认 `dryRun: true` 防误发） |
 | `devlog_save_draft` | 使用独立 Playwright 浏览器自动渲染 PNG 卡片并填表存入小红书 / B站 / 抖音草稿箱（永不自动点发布，默认 `dryRun: true`） |
+| `devlog_send_work_report` | 生成结构化工作日报/周报，并通过 Webhook 推送到 **飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ (OneBot v11)**（默认 `dryRun: true`） |
 
 ---
 
@@ -58,6 +59,10 @@ node src/cli.js save-draft --platform xiaohongshu --bundle out/<你的目录>
 
 # 真正执行自动填表存草稿（需先安装可选依赖：npm install playwright && npx playwright install chromium）
 node src/cli.js save-draft --platform xiaohongshu --bundle out/<你的目录> --execute
+
+# 生成并推送工作日报 / 周报（支持 feishu / dingtalk / wecom / slack / discord / qq_onebot）
+node src/cli.js send-report --channel feishu --endpoint https://open.feishu.cn/open-apis/bot/v2/hook/xxx --period daily
+node src/cli.js send-report --channel qq_onebot --endpoint http://127.0.0.1:3000 --group-id 123456 --period daily --execute
 
 运行测试：
 

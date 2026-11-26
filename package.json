@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-devlog-poster",
-  "version": "0.2.0",
-  "description": "DSH (DeepSeek Harness) Build-in-Public devlog generator & multi-platform publisher for Xiaohongshu, Bilibili, GitHub, and Douyin.",
+  "version": "0.3.0",
+  "description": "DSH (DeepSeek Harness) Build-in-Public devlog & daily/weekly work report plugin for GitHub, Xiaohongshu, Bilibili, Douyin, Feishu, DingTalk, WeCom, Slack, Discord, and QQ.",
   "type": "module",
   "main": "src/index.js",
   "exports": {

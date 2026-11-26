@@ -14,10 +14,13 @@ import {
   writeDevlogBundle,
   publishToGitHub,
   savePlatformDraft,
+  formatWorkReport,
+  sendWorkReport,
 } from '../src/index.js';
 import { AVAILABLE_STYLES } from '../src/styles.js';
+import { SUPPORTED_REPORT_CHANNELS } from '../src/work-report.js';
 
-test('DSH Cordis plugin exports name, inject, and registers 4 tools cleanly', async () => {
+test('DSH Cordis plugin exports name, inject, and registers 5 tools cleanly', async () => {
   assert.equal(name, 'dsh-plugin-devlog-poster');
   assert.deepEqual(inject, ['tools']);
 
@@ -36,7 +39,7 @@ test('DSH Cordis plugin exports name, inject, and registers 4 tools cleanly', as
   };
 
   const cleanup = apply(mockCtx);
-  assert.equal(registered.length, 4);
+  assert.equal(registered.length, 5);
   assert.deepEqual(
     registered.map((t) => t.name),
     [
@@ -44,6 +47,7 @@ test('DSH Cordis plugin exports name, inject, and registers 4 tools cleanly', as
       'devlog_generate_bundle',
       'devlog_publish_github',
       'devlog_save_draft',
+      'devlog_send_work_report',
     ]
   );
 
@@ -87,7 +91,7 @@ test('DSH Cordis plugin exports name, inject, and registers 4 tools cleanly', as
   }
 
   cleanup();
-  assert.equal(disposedCount, 4);
+  assert.equal(disposedCount, 5);
 });
 
 test('collectGitContext reads commits and diff stats from a real git repository', () => {
@@ -155,6 +159,37 @@ test('publishToGitHub supports dry-run and real DEVLOG.md append', () => {
     assert.ok(relDry.command.includes('gh release create v0.1.0'));
   } finally {
     rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('formats daily/weekly work reports and builds webhook payloads for all 6 channels', async () => {
+  const ctx = collectGitContext({
+    repoPath: process.cwd(),
+    projectName: 'Kirakila7/dsh-plugin-devlog-poster',
+    highlights: ['新增工作日报与周报双格式生成', '支持 6 大办公渠道 Webhook 直推'],
+    pitfalls: ['QQ 聊天框不渲染 Markdown，提供纯文本专用模板'],
+    nextSteps: ['在 DSH 中实机联调 5 个工具'],
+  });
+
+  const daily = formatWorkReport(ctx, { period: 'daily' });
+  assert.ok(daily.qqText.includes('一、今日完成'));
+  assert.ok(daily.markdown.includes('#### 今日完成'));
+
+  const weekly = formatWorkReport(ctx, { period: 'weekly' });
+  assert.ok(weekly.qqText.includes('本周完成'));
+
+  for (const channel of SUPPORTED_REPORT_CHANNELS) {
+    const res = await sendWorkReport({
+      channel,
+      endpoint: channel === 'qq_onebot' ? 'http://127.0.0.1:3000' : 'https://example.com/hook',
+      groupId: '123456',
+      report: daily,
+      dryRun: true,
+    });
+    assert.equal(res.ok, true);
+    assert.equal(res.dryRun, true);
+    assert.equal(res.channel, channel);
+    assert.ok(res.body);
   }
 });
 

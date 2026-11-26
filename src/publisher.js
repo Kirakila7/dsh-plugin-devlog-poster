@@ -7,6 +7,7 @@ import {
 } from './card-renderer.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { AVAILABLE_STYLES, MODEL_STYLES } from './styles.js';
+import { formatWorkReport } from './work-report.js';
 
 function escapeHtml(str = '') {
   return String(str)
@@ -58,7 +59,7 @@ function buildStyleVariants(context, defaultFormatted) {
   return variants;
 }
 
-function buildPreviewHtml(defaultStyleId, variants) {
+function buildPreviewHtml(defaultStyleId, variants, workReport) {
   const initial = variants[defaultStyleId] || variants.big_fat_fish;
   const switcherButtons = AVAILABLE_STYLES.map((id) => {
     const item = variants[id];
@@ -173,6 +174,23 @@ function buildPreviewHtml(defaultStyleId, variants) {
     ${cardsHtml}
   </main>
 
+  <section class="grid" style="margin-top: 20px;">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>📋 工作日报 · 纯文本版（QQ / 微信 / Slack）</h2>
+        <button onclick="copyText('work-plain', this)">一键复制</button>
+      </div>
+      <textarea id="work-plain" rows="9">${escapeHtml(workReport.qqText)}</textarea>
+    </section>
+    <section class="panel">
+      <div class="panel-head">
+        <h2>📝 工作日报 · Markdown 版（飞书 / 钉钉 / 企微 / Discord）</h2>
+        <button onclick="copyText('work-md', this)">一键复制</button>
+      </div>
+      <textarea id="work-md" rows="9">${escapeHtml(workReport.markdown)}</textarea>
+    </section>
+  </section>
+
   <section class="cards-wrap">
     <div class="card-box">
       <div class="panel-head">
@@ -262,16 +280,19 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
   mkdirSync(bundleDir, { recursive: true });
 
   const variants = buildStyleVariants(context, formatted);
+  const workReport = formatWorkReport(context, { period: 'daily' });
   const activeStyle = formatted.meta.style || 'big_fat_fish';
   const verticalSvg = variants[activeStyle].verticalSvg;
   const horizontalSvg = variants[activeStyle].horizontalSvg;
-  const previewHtml = buildPreviewHtml(activeStyle, variants);
+  const previewHtml = buildPreviewHtml(activeStyle, variants, workReport);
 
   const files = {
     github: join(bundleDir, 'github.md'),
     xiaohongshu: join(bundleDir, 'xiaohongshu.md'),
     bilibili: join(bundleDir, 'bilibili.md'),
     douyin: join(bundleDir, 'douyin.md'),
+    workDailyMd: join(bundleDir, 'work-daily.md'),
+    workDailyPlain: join(bundleDir, 'work-daily-plain.txt'),
     cardVertical: join(bundleDir, 'card-vertical.svg'),
     cardHorizontal: join(bundleDir, 'card-horizontal.svg'),
     preview: join(bundleDir, 'preview.html'),
@@ -290,12 +311,18 @@ export function writeDevlogBundle(context, formatted, { outputDir = 'out' } = {}
     `${formatted.platforms.douyin.content}\n\n---\n\n${formatted.platforms.douyin.videoScript}\n`,
     'utf8'
   );
+  writeFileSync(files.workDailyMd, workReport.markdown + '\n', 'utf8');
+  writeFileSync(files.workDailyPlain, workReport.qqText + '\n', 'utf8');
   writeFileSync(files.cardVertical, verticalSvg, 'utf8');
   writeFileSync(files.cardHorizontal, horizontalSvg, 'utf8');
   writeFileSync(files.preview, previewHtml, 'utf8');
   writeFileSync(
     files.manifest,
-    JSON.stringify({ context, formatted, files, availableStyles: AVAILABLE_STYLES }, null, 2) + '\n',
+    JSON.stringify(
+      { context, formatted, workReport, files, availableStyles: AVAILABLE_STYLES },
+      null,
+      2
+    ) + '\n',
     'utf8'
   );
 

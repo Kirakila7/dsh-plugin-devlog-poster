@@ -3,6 +3,7 @@ import { collectGitContext } from './git-context.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
 import { savePlatformDraft } from './draft-automation.js';
+import { formatWorkReport, sendWorkReport } from './work-report.js';
 
 function parseArgs(argv) {
   const [command = 'generate', ...rest] = argv;
@@ -76,6 +77,30 @@ function parseArgs(argv) {
         opts.profileDir = next;
         i++;
         break;
+      case '--channel':
+        opts.channel = next;
+        i++;
+        break;
+      case '--endpoint':
+        opts.endpoint = next;
+        i++;
+        break;
+      case '--token':
+        opts.token = next;
+        i++;
+        break;
+      case '--group-id':
+        opts.groupId = next;
+        i++;
+        break;
+      case '--user-id':
+        opts.userId = next;
+        i++;
+        break;
+      case '--period':
+        opts.period = next;
+        i++;
+        break;
       case '--execute':
         opts.dryRun = false;
         break;
@@ -96,9 +121,34 @@ async function main() {
 Usage:
   devlog-poster generate [--repo <path>] [--name <project>] [--style big_fat_fish|gemini|chatgpt|claude]
                          [--since "24 hours ago"] [--highlight "..."] [--pitfall "..."] [--next "..."] [--out out]
-  devlog-poster publish-github [--mode devlog_file|release] [--tag v0.2.0] [--execute]
+  devlog-poster publish-github [--mode devlog_file|release] [--tag v0.3.0] [--execute]
   devlog-poster save-draft --platform xiaohongshu|bilibili|douyin --bundle <bundleDir> [--execute]
+  devlog-poster send-report --channel feishu|dingtalk|wecom|slack|discord|qq_onebot [--period daily|weekly] [--endpoint <url>] [--group-id <id>] [--execute]
 `);
+    return;
+  }
+
+  if (command === 'send-report') {
+    const period = opts.period === 'weekly' ? 'weekly' : 'daily';
+    const context = collectGitContext({
+      repoPath: opts.repoPath || process.cwd(),
+      projectName: opts.projectName,
+      since: opts.since || (period === 'weekly' ? '7 days ago' : '24 hours ago'),
+      highlights: opts.highlights,
+      pitfalls: opts.pitfalls,
+      nextSteps: opts.nextSteps,
+    });
+    const report = formatWorkReport(context, { period, title: opts.title });
+    const result = await sendWorkReport({
+      channel: opts.channel || 'feishu',
+      endpoint: opts.endpoint,
+      token: opts.token,
+      groupId: opts.groupId,
+      userId: opts.userId,
+      report,
+      dryRun: opts.dryRun !== false,
+    });
+    console.log(JSON.stringify(result, null, 2));
     return;
   }
 
