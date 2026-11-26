@@ -207,7 +207,7 @@ test('builds platform-adapted image prompts and provider requests for all image 
   const allPrompts = buildAllPlatformImagePrompts(ctx, { style: 'big_fat_fish' });
   assert.equal(allPrompts.xiaohongshu.aspectRatio, '3:4');
   assert.equal(allPrompts.bilibili.aspectRatio, '16:9');
-  assert.ok(allPrompts.xiaohongshu.prompt.includes('blue whale'));
+  assert.ok(allPrompts.xiaohongshu.prompt.includes('whale tail'));
 
   for (const provider of SUPPORTED_IMAGE_PROVIDERS) {
     const res = await generateVisualImage({
@@ -220,7 +220,7 @@ test('builds platform-adapted image prompts and provider requests for all image 
     assert.equal(res.ok, true);
     assert.equal(res.dryRun, true);
     assert.equal(res.provider, provider);
-    assert.ok(res.promptSpec.prompt.includes('four-point crystal sparkles'));
+    assert.ok(res.promptSpec.prompt.includes('Hakimi'));
   }
 });
 

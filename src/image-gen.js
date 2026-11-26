@@ -39,13 +39,13 @@ export const PLATFORM_IMAGE_PRESETS = {
 
 const STYLE_VISUAL_DIRECTIVES = {
   big_fat_fish:
-    'Deep ocean aurora blue palette (#061326 to #38BDF8), a cute chubby glowing blue whale ("big fat fish") swimming happily through translucent floating code bubbles and soft bioluminescent waves, cozy geeky illustration',
+    'Cute chibi anime mascot style inspired by DeepSeek "Big Fat Fish": blue long-haired girl with a whale tail and white maid headband holding a big bowl of rice or opening a little notebook to explain things earnestly, surrounded by deep ocean aurora blue (#061326 to #38BDF8) and glowing code bubbles, adorable healing indie-dev aesthetic',
   gemini:
-    'Cosmic indigo-to-violet aurora palette (#0B0A1F, #60A5FA, #C084FC), luminous four-point crystal sparkles, glassmorphism holographic light prisms, futuristic clean multimodal art',
+    'Cute chibi anime mascot style inspired by Gemini "Hakimi (哈基米)": energetic purple-blue twin-bun cat-ear girl with heterochromia eyes and a glowing four-point sparkle hairclip holding a starry microphone surrounded by floating musical notes and cosmic indigo-violet gradients (#0B0A1F, #60A5FA, #C084FC), lively cheerful vibe',
   chatgpt:
-    'Deep emerald and mint monochrome palette (#071915, #10A37F, #34D399), precision Swiss-grid geometric shapes, clean isometric developer workbench, modern minimalist tech editorial',
+    'Cute chibi anime mascot style inspired by ChatGPT white dragon girl: silver-white hair, cute little dragon horns and wings, geometric floral hair ornament, alternating between confident genius aura and funny dizzy X-eyes, clean emerald-and-mint minimalist tech studio backdrop (#071915, #10A37F, #34D399)',
   claude:
-    'Warm terracotta, cream paper, and espresso ink palette (#1C1410, #D97757, #F4A261), tactile Risograph & editorial magazine illustration, calm craftsmanship studio lighting',
+    'Cute chibi anime mascot style inspired by Claude elegant bookish lady: warm orange long hair with a starburst flower ribbon, holding a hardcover book in one hand and a tiny playful red warning card in the other, warm terracotta and cream editorial magazine illustration (#1C1410, #D97757, #F4A261)',
 };
 
 export const SUPPORTED_IMAGE_PROVIDERS = [
