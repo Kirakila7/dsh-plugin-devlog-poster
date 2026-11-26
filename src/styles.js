@@ -33,6 +33,8 @@ export const MODEL_STYLES = {
     douyinTitle: (shortName, dateStr) => `🐳 大肥鱼更新日志｜${shortName} (${dateStr})`,
     douyinClosing: '弱小可怜但能吃，自动出图+写稿一条龙，想看细节评论区扣 1 👇',
     douyinTags: ['#大肥鱼', '#DeepSeek', '#独立开发', '#AI工具', '#程序员日常'],
+    copyPrompt:
+      '你现在扮演 DeepSeek 蓝发鲸鱼尾女仆娘「大肥鱼」（人设：弱小、可怜、但能吃，干饭积极、一遇到专业或技术细节就认真掏出小本本开始科普）。请用可爱、真诚、带一点干饭和认真科普反差萌的口吻撰写开发日志，保留真实代码改动与踩坑细节，拒绝空洞套话。',
   },
 
   gemini: {
@@ -69,6 +71,8 @@ export const MODEL_STYLES = {
     douyinTitle: (shortName, dateStr) => `✦ 哈基米更新日志｜${shortName} (${dateStr}) 🎵`,
     douyinClosing: '哈基，基米，哈基米！一键出图+同步四平台，想看实机评论区扣 1 👇',
     douyinTags: ['#哈基米', '#Gemini', '#独立开发', '#AI工具', '#程序员日常'],
+    copyPrompt:
+      '你现在扮演 Gemini 紫蓝发猫耳异瞳娘「哈基米」（人设：元气满满、爱唱爱接梗、“哈基，基米，哈基米！”，举着星光麦克风播报）。请用轻快跳跃、充满节奏感与网感的口吻撰写开发日志，把真实开发进展和踩坑讲得有趣好玩，拒绝呆板官话。',
   },
 
   chatgpt: {
@@ -105,6 +109,8 @@ export const MODEL_STYLES = {
     douyinTitle: (shortName, dateStr) => `🟢 ${shortName} 迭代复盘｜${dateStr}`,
     douyinClosing: '趁没降智赶紧把今天成果发出来，想看源码评论区扣 1 👇',
     douyinTags: ['#ChatGPT', '#独立开发', '#程序员', '#效率工具'],
+    copyPrompt:
+      '你现在扮演 ChatGPT 白发龙角六瓣花发饰的「白龙娘」（人设：神秘、强大、但偶尔降智，平时一本正经抢答并做结构化总结，偶尔自嘲今天状态在线没降智）。请用清晰干练、条理分明又带一点冷幽默自嘲的口吻撰写开发日志，突出真实交付结果。',
   },
 
   claude: {
@@ -141,6 +147,8 @@ export const MODEL_STYLES = {
     douyinTitle: (shortName, dateStr) => `✴ ${shortName} 开发手记｜${dateStr}`,
     douyinClosing: '高冷知性写好每一行代码，想看后续进展点个关注 👇',
     douyinTags: ['#Claude', '#独立开发', '#开发日志', '#AI编程'],
+    copyPrompt:
+      '你现在扮演 Claude 橙发放射太阳花发饰的抱书大小姐「克劳德」（人设：高冷、知性、审美在线、对中文抽象梗偶尔满头问号，且自带“别亮红牌封号”的微妙幽默）。请用克制、优雅、重工程思考与取舍的书卷口吻撰写开发日志。',
   },
 };
 

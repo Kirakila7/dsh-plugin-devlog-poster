@@ -37,15 +37,18 @@ export const PLATFORM_IMAGE_PRESETS = {
   },
 };
 
+const SHARED_CHIBI_ART_STYLE =
+  '2-head-tall cute chibi anime comic illustration, clean bold dark ink outlines, bright cel-shaded flat pastel coloring, expressive meme-sticker charm, soft clean background';
+
 const STYLE_VISUAL_DIRECTIVES = {
   big_fat_fish:
-    'Cute chibi anime mascot style inspired by DeepSeek "Big Fat Fish": blue long-haired girl with a whale tail and white maid headband holding a big bowl of rice or opening a little notebook to explain things earnestly, surrounded by deep ocean aurora blue (#061326 to #38BDF8) and glowing code bubbles, adorable healing indie-dev aesthetic',
+    `${SHARED_CHIBI_ART_STYLE}. Character: DeepSeek "Big Fat Fish" — blue long-haired girl with a whale tail and white frilly maid headband, holding a huge bowl of steamed white rice or earnestly opening a little notebook to explain code, surrounded by glowing deep-ocean blue bubbles (#061326 to #38BDF8)`,
   gemini:
-    'Cute chibi anime mascot style inspired by Gemini "Hakimi (哈基米)": energetic purple-blue twin-bun cat-ear girl with heterochromia eyes and a glowing four-point sparkle hairclip holding a starry microphone surrounded by floating musical notes and cosmic indigo-violet gradients (#0B0A1F, #60A5FA, #C084FC), lively cheerful vibe',
+    `${SHARED_CHIBI_ART_STYLE}. Character: Gemini "Hakimi (哈基米)" — energetic purple-blue twin-bun cat-ear girl with pink-and-gold heterochromia eyes and a glowing four-point star hairclip, holding a starry microphone surrounded by floating musical notes and violet-blue sparkles (#0B0A1F, #60A5FA, #C084FC)`,
   chatgpt:
-    'Cute chibi anime mascot style inspired by ChatGPT white dragon girl: silver-white hair, cute little dragon horns and wings, geometric floral hair ornament, alternating between confident genius aura and funny dizzy X-eyes, clean emerald-and-mint minimalist tech studio backdrop (#071915, #10A37F, #34D399)',
+    `${SHARED_CHIBI_ART_STYLE}. Character: ChatGPT white dragon girl — silver-white hair, cute little dragon horns and tiny wings, white geometric knot-flower hair ornament, confident genius smile or playful dizzy X-eyes, accented with emerald-mint tech sparkles (#071915, #10A37F, #34D399)`,
   claude:
-    'Cute chibi anime mascot style inspired by Claude elegant bookish lady: warm orange long hair with a starburst flower ribbon, holding a hardcover book in one hand and a tiny playful red warning card in the other, warm terracotta and cream editorial magazine illustration (#1C1410, #D97757, #F4A261)',
+    `${SHARED_CHIBI_ART_STYLE}. Character: Claude bookish lady — warm orange long hair with a starburst flower ribbon, holding a brown hardcover book in one hand and a tiny playful red warning sign in the other, warm terracotta and cream editorial glow (#1C1410, #D97757, #F4A261)`,
 };
 
 export const SUPPORTED_IMAGE_PROVIDERS = [

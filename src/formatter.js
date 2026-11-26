@@ -154,6 +154,7 @@ export function formatMultiPlatformDevlog(context, options = {}) {
       statsLine,
       style: theme.id,
       styleName: theme.name,
+      copyPrompt: theme.copyPrompt,
     },
     platforms: {
       github: {
