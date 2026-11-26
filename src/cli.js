@@ -1,0 +1,138 @@
+#!/usr/bin/env node
+import { collectGitContext } from './git-context.js';
+import { formatMultiPlatformDevlog } from './formatter.js';
+import { publishToGitHub, writeDevlogBundle } from './publisher.js';
+
+function parseArgs(argv) {
+  const [command = 'generate', ...rest] = argv;
+  const opts = {
+    highlights: [],
+    pitfalls: [],
+    nextSteps: [],
+  };
+
+  for (let i = 0; i < rest.length; i++) {
+    const token = rest[i];
+    const next = rest[i + 1];
+    switch (token) {
+      case '--repo':
+        opts.repoPath = next;
+        i++;
+        break;
+      case '--name':
+        opts.projectName = next;
+        i++;
+        break;
+      case '--title':
+        opts.title = next;
+        i++;
+        break;
+      case '--style':
+        opts.style = next;
+        i++;
+        break;
+      case '--since':
+        opts.since = next;
+        i++;
+        break;
+      case '--out':
+        opts.outputDir = next;
+        i++;
+        break;
+      case '--highlight':
+        opts.highlights.push(next);
+        i++;
+        break;
+      case '--pitfall':
+        opts.pitfalls.push(next);
+        i++;
+        break;
+      case '--next':
+        opts.nextSteps.push(next);
+        i++;
+        break;
+      case '--mode':
+        opts.mode = next;
+        i++;
+        break;
+      case '--tag':
+        opts.tag = next;
+        i++;
+        break;
+      case '--gh-repo':
+        opts.ghRepo = next;
+        i++;
+        break;
+      case '--execute':
+        opts.dryRun = false;
+        break;
+      default:
+        break;
+    }
+  }
+
+  return { command, opts };
+}
+
+function main() {
+  const { command, opts } = parseArgs(process.argv.slice(2));
+
+  if (command === 'help' || command === '--help' || command === '-h') {
+    console.log(`dsh-plugin-devlog-poster CLI
+
+Usage:
+  devlog-poster generate [--repo <path>] [--name <project>] [--since "24 hours ago"]
+                         [--highlight "..."] [--pitfall "..."] [--next "..."] [--out out]
+  devlog-poster publish-github [--mode devlog_file|release] [--tag v0.1.0] [--execute]
+`);
+    return;
+  }
+
+  const context = collectGitContext({
+    repoPath: opts.repoPath || process.cwd(),
+    projectName: opts.projectName,
+    since: opts.since || '24 hours ago',
+    highlights: opts.highlights,
+    pitfalls: opts.pitfalls,
+    nextSteps: opts.nextSteps,
+  });
+
+  const formatted = formatMultiPlatformDevlog(context, {
+    title: opts.title,
+    style: opts.style || 'big_fat_fish',
+  });
+
+  if (command === 'generate') {
+    const { bundleDir, files } = writeDevlogBundle(context, formatted, {
+      outputDir: opts.outputDir || 'out',
+    });
+    console.log(`✅ Devlog bundle generated: ${bundleDir}`);
+    console.log(`   - Preview UI : ${files.preview}`);
+    console.log(`   - GitHub     : ${files.github}`);
+    console.log(`   - 小红书     : ${files.xiaohongshu}`);
+    console.log(`   - B站        : ${files.bilibili}`);
+    console.log(`   - 抖音       : ${files.douyin}`);
+    console.log(`   - 3:4 Card   : ${files.cardVertical}`);
+    console.log(`   - 16:9 Card  : ${files.cardHorizontal}`);
+    return;
+  }
+
+  if (command === 'publish-github') {
+    const result = publishToGitHub({
+      mode: opts.mode || 'devlog_file',
+      repoPath: opts.repoPath || process.cwd(),
+      repo: opts.ghRepo,
+      tag: opts.tag,
+      title: formatted.platforms.github.title,
+      body: formatted.platforms.github.content,
+      dryRun: opts.dryRun !== false,
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  console.error(`Unknown command: ${command}. Run with --help for usage.`);
+  process.exitCode = 1;
+}
+
+main();

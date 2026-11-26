@@ -1,0 +1,44 @@
+{
+  "name": "dsh-plugin-devlog-poster",
+  "version": "0.1.0",
+  "description": "DSH (DeepSeek Harness) Build-in-Public devlog generator & multi-platform publisher for Xiaohongshu, Bilibili, GitHub, and Douyin.",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "bin": {
+    "devlog-poster": "./src/cli.js"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "generate": "node src/cli.js generate"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "devlog",
+    "build-in-public",
+    "xiaohongshu",
+    "bilibili",
+    "douyin",
+    "github"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/dsh": ">=0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}
