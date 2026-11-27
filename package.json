@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-devlog-poster",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "DSH (DeepSeek Harness) Build-in-Public devlog & daily/weekly work report plugin for GitHub, Xiaohongshu, Bilibili, Douyin, Feishu, DingTalk, WeCom, Slack, Discord, and QQ.",
   "type": "module",
   "main": "src/index.js",
@@ -10,9 +10,20 @@
   "bin": {
     "devlog-poster": "./src/cli.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kirakila7/dsh-plugin-devlog-poster.git"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
   "files": [
     "src",
     "assets",
+    "cordis.patch.yml",
+    "screenshots.json",
     "README.md"
   ],
   "scripts": {
@@ -31,7 +42,7 @@
     "github"
   ],
   "peerDependencies": {
-    "@deepseek-ai/dsh": ">=0.2.0"
+    "@deepseek-ai/dsh": ">=0.0.1-rc.1 <0.1.0 || >=0.1.0-rc.1 <0.3.0-0"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh": {
