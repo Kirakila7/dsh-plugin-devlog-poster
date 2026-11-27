@@ -1,0 +1,6 @@
+{
+  "name": "dsh-plugin-devlog-poster",
+  "version": "0.8.0",
+  "description": "Summarize single or multi-repo git commits into multi-platform Build-in-Public devlogs, 4-slide visual cards, and daily/weekly work reports.",
+  "contextFileName": "skills/devlog-poster/SKILL.md"
+}

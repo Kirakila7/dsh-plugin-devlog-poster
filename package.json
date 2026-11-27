@@ -25,6 +25,7 @@
     "skills",
     "plugin.json",
     ".codex-plugin",
+    "gemini-extension.json",
     "cordis.patch.yml",
     "screenshots.json",
     "README.md"
