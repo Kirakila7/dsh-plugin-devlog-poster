@@ -9,9 +9,173 @@ import {
   generateVisualImage,
 } from './image-gen.js';
 import { loadConfig, saveConfig } from './config.js';
+import { resolveStyle } from './styles.js';
 
 export const name = 'dsh-plugin-devlog-poster';
 export const inject = ['tools'];
+
+function renderCollectContext(value) {
+  const commits = value?.commits || [];
+  const stats = value?.stats || { filesChanged: 0, insertions: 0, deletions: 0 };
+  const topSubjects = commits
+    .slice(0, 3)
+    .map((c) => `  - \`${c.hash || ''}\` ${c.subject}`.trimEnd());
+
+  const lines = [
+    `### 📦 Git 上下文已采集 · ${value?.projectName || 'unknown'}`,
+    `- **分支**：\`${value?.branch || 'main'}\`${value?.isGitRepo === false ? '（非 Git 仓库，将使用手动要点）' : ''}`,
+    `- **近期提交**：${commits.length} 条 · 改动 ${stats.filesChanged} 个文件（+${stats.insertions} / -${stats.deletions}）`,
+  ];
+
+  if (topSubjects.length > 0) {
+    lines.push('- **最新提交摘要**：', ...topSubjects);
+  } else {
+    lines.push('- **提示**：当前时间窗口内暂无提交，建议在生成时补充 `highlights` 或放宽 `since`（如 `"7 days ago"`）。');
+  }
+
+  lines.push('', '👉 **下一步**：调用 `devlog_generate_bundle` 一键生成四平台文案、4 图轮播套图与 `preview.html`。');
+  return lines.join('\n');
+}
+
+function renderGenerateBundle(value) {
+  const theme = resolveStyle(value?.meta?.style || 'big_fat_fish');
+  const slideCount = value?.files?.slides?.length || 0;
+  const lines = [
+    `### ✅ Devlog 发布包已生成 · ${theme.emoji} ${theme.name}`,
+    `- **预览工作台**：\`${value?.files?.preview || ''}\``,
+    `- **输出目录**：\`${value?.bundleDir || ''}\``,
+  ];
+
+  if (value?.meta?.statsLine) {
+    lines.push(`- **改动概览**：${value.meta.statsLine}`);
+  }
+
+  lines.push(
+    `- **已就绪产物**：GitHub / 小红书 / B站 / 抖音 4 平台文案 · 工作日报（纯文本 + Markdown）· 双比例封面卡（3:4 & 16:9）· ${slideCount} 张轮播套图（P1~P4）`,
+    '',
+    '👉 **下一步建议**：',
+    '1. 在浏览器打开 `preview.html`（支持实时切换 4 套 AI 娘风格、复制文案与一键导出 PNG）。',
+    '2. 需要发布到仓库可调用 `devlog_publish_github`；需要填入小红书/B站/抖音草稿箱可调用 `devlog_save_draft`。'
+  );
+  return lines.join('\n');
+}
+
+function renderPublishGithub(value) {
+  if (value?.dryRun) {
+    const targetLine =
+      value.mode === 'release'
+        ? `- **将执行命令**：\`${value.command || ''}\``
+        : `- **目标文件**：\`${value.target || ''}\``;
+    return [
+      `### 🧪 [DRY RUN] GitHub 发布预览（${value.mode}）`,
+      targetLine,
+      ...(value.tag ? [`- **Release Tag**：\`${value.tag}\`（${value.title || value.tag}）`] : []),
+      '',
+      '👉 **下一步**：确认无误后，传入 `dryRun: false` 正式执行发布。',
+    ].join('\n');
+  }
+
+  return [
+    `### 🚀 GitHub 发布完成（${value?.mode || 'devlog_file'}）`,
+    `- **发布结果**：\`${value?.url || value?.target || 'ok'}\``,
+    ...(value?.tag ? [`- **Release Tag**：\`${value.tag}\``] : []),
+  ].join('\n');
+}
+
+function renderSaveDraft(value) {
+  if (value?.dryRun) {
+    const steps = (value.steps || []).map((s, idx) => `${idx + 1}. ${s}`);
+    return [
+      `### 🧪 [DRY RUN] 自动存草稿计划 · ${value.label || value.platform}`,
+      `- **创作者页面**：${value.url || ''}`,
+      ...(value.title ? [`- **草稿标题**：${value.title}`] : []),
+      ...(value.pngPath ? [`- **卡片 PNG 路径**：\`${value.pngPath}\``] : []),
+      '- **安全策略**：仅自动填表并尝试存草稿，**永不自动点击发布**。',
+      ...(steps.length > 0 ? ['', '**执行步骤**：', ...steps] : []),
+      '',
+      '👉 **下一步**：确认后传入 `dryRun: false` 启动独立浏览器填表。',
+    ].join('\n');
+  }
+
+  if (value?.ok) {
+    const notes = (value.notes || []).map((n) => `- ${n}`);
+    return [
+      `### ✅ 草稿已填入 · ${value.platform}`,
+      `- **页面地址**：${value.url || ''}`,
+      `- **自动点击存草稿**：${value.savedDraft ? '已点击' : '未检测到按钮（请在浏览器中手动保存）'}`,
+      ...(value.renderedPng ? [`- **已渲染卡片**：\`${value.renderedPng}\``] : []),
+      ...(notes.length > 0 ? ['', '**执行记录**：', ...notes] : []),
+      '',
+      '👉 **下一步**：请在已打开的浏览器窗口中人工复核后点击发布。',
+    ].join('\n');
+  }
+
+  const isMissingPlaywright = value?.error === 'PLAYWRIGHT_NOT_INSTALLED';
+  return [
+    `### ⚠️ 浏览器自动存草稿暂不可用（${value?.error || 'ERROR'}）`,
+    `- **原因**：${value?.message || value?.error || '未知错误'}`,
+    ...(isMissingPlaywright
+      ? [
+          '',
+          '**安装可选依赖后重试**：',
+          '```bash',
+          'npm install playwright && npx playwright install chromium',
+          '```',
+        ]
+      : []),
+    '',
+    '👉 **替代方案**：可直接打开 bundle 内的 `preview.html`，一键复制正文并导出 PNG 手动发布。',
+  ].join('\n');
+}
+
+function renderSendWorkReport(value) {
+  const periodLabel = value?.report?.period === 'weekly' ? '周报' : '日报';
+  if (value?.dryRun) {
+    const hasEndpoint = Boolean(value?.url);
+    return [
+      `### 🧪 [DRY RUN] 工作${periodLabel}推送预览 · ${value?.channel || 'feishu'}`,
+      ...(value?.report?.title ? [`- **标题**：${value.report.title}`] : []),
+      ...(value?.report?.statsSummary ? [`- **概览**：${value.report.statsSummary}`] : []),
+      `- **目标端点**：${hasEndpoint ? `\`${value.url}\`` : '⚠️ 未配置 endpoint'}`,
+      '',
+      hasEndpoint
+        ? '👉 **下一步**：确认内容无误后，传入 `dryRun: false` 正式发送。'
+        : '👉 **下一步**：请传入 `endpoint`（或先配置 `reportEndpoint`）后再设置 `dryRun: false` 发送。',
+    ].join('\n');
+  }
+
+  const icon = value?.ok ? '✅' : '⚠️';
+  return [
+    `### ${icon} 工作${periodLabel}已推送 · ${value?.channel || 'feishu'}`,
+    `- **HTTP 状态**：${value?.status ?? 'unknown'}`,
+    `- **目标端点**：\`${value?.url || ''}\``,
+    ...(value?.report?.title ? [`- **标题**：${value.report.title}`] : []),
+  ].join('\n');
+}
+
+function renderGenerateImage(value) {
+  const spec = value?.promptSpec || {};
+  if (value?.dryRun) {
+    const snippet = (spec.prompt || '').split('\n').slice(0, 2).join(' ');
+    return [
+      `### 🧪 [DRY RUN] 视觉封面生图预览 · ${spec.label || value?.platform || ''}`,
+      `- **风格**：${spec.styleName || spec.style || 'big_fat_fish'}`,
+      `- **规格**：${spec.aspectRatio || ''}（${spec.size || ''}）`,
+      `- **模型通道**：\`${value?.provider || 'openai'}\` / \`${value?.model || 'default'}\``,
+      ...(snippet ? [`- **Prompt 预览**：${snippet}`] : []),
+      '',
+      '👉 **下一步**：传入 `dryRun: false`（并配置对应 API Key）正式出图，或直接复制 Prompt 到任意生图工具。',
+    ].join('\n');
+  }
+
+  return [
+    `### 🎨 视觉封面已生成 · ${value?.provider}/${value?.model}`,
+    `- **输出位置**：\`${value?.savedPath || value?.imageUrl || 'ok'}\``,
+    ...(spec.aspectRatio ? [`- **规格**：${spec.label || ''} (${spec.aspectRatio})`] : []),
+    '',
+    '👉 **下一步**：可将生成图片路径传入 `devlog_generate_bundle` 的 `heroImagePath` 参数叠加合成封面卡片。',
+  ].join('\n');
+}
 
 function createToolSpecs(runtimeConfig = {}) {
   const config = { ...loadConfig(), ...runtimeConfig };
@@ -49,7 +213,7 @@ function createToolSpecs(runtimeConfig = {}) {
         render: (_args, value) => [
           {
             type: 'text',
-            text: `Collected ${value.commits.length} commits for ${value.projectName} (${value.stats.filesChanged} files, +${value.stats.insertions}/-${value.stats.deletions}).`,
+            text: renderCollectContext(value),
           },
         ],
       },
@@ -119,7 +283,7 @@ function createToolSpecs(runtimeConfig = {}) {
         render: (_args, value) => [
           {
             type: 'text',
-            text: `Devlog bundle ready at ${value.bundleDir}\nPreview: ${value.files.preview}`,
+            text: renderGenerateBundle(value),
           },
         ],
       },
@@ -187,9 +351,7 @@ function createToolSpecs(runtimeConfig = {}) {
         render: (_args, value) => [
           {
             type: 'text',
-            text: value.dryRun
-              ? `[DRY RUN] Ready to publish (${value.mode}): ${value.target || value.command}`
-              : `Published to GitHub (${value.mode}): ${value.target || value.url}`,
+            text: renderPublishGithub(value),
           },
         ],
       },
@@ -231,11 +393,7 @@ function createToolSpecs(runtimeConfig = {}) {
         render: (_args, value) => [
           {
             type: 'text',
-            text: value.dryRun
-              ? `[DRY RUN] Draft plan ready for ${value.label} (${value.url})`
-              : value.ok
-                ? `Draft filled on ${value.platform} (savedDraft=${value.savedDraft}): ${value.url}`
-                : `Draft automation unavailable: ${value.message || value.error}`,
+            text: renderSaveDraft(value),
           },
         ],
       },
@@ -323,9 +481,7 @@ function createToolSpecs(runtimeConfig = {}) {
         render: (_args, value) => [
           {
             type: 'text',
-            text: value.dryRun
-              ? `[DRY RUN] Work report ready for ${value.channel} (${value.url || 'no endpoint set'})`
-              : `Work report sent to ${value.channel} (HTTP ${value.status})`,
+            text: renderSendWorkReport(value),
           },
         ],
       },
@@ -413,9 +569,7 @@ function createToolSpecs(runtimeConfig = {}) {
         render: (_args, value) => [
           {
             type: 'text',
-            text: value.dryRun
-              ? `[DRY RUN] Image prompt ready for ${value.promptSpec.label} (${value.promptSpec.aspectRatio}) via ${value.provider}/${value.model}`
-              : `Image generated via ${value.provider}/${value.model}: ${value.savedPath || value.imageUrl || 'ok'}`,
+            text: renderGenerateImage(value),
           },
         ],
       },
