@@ -16,9 +16,11 @@
 
 | 🐳 大肥鱼（DeepSeek） | ✦ 哈基米（Gemini） |
 | :---: | :---: |
-| <img src="./assets/card-big_fat_fish.svg" width="320" alt="Big Fat Fish Card"/> | <img src="./assets/card-gemini.svg" width="320" alt="Gemini Hakimi Card"/> |
+| <img src="./assets/mascots/big_fat_fish.png" width="320" alt="大肥鱼更新日志"/> | <img src="./assets/mascots/gemini.png" width="320" alt="哈基米更新日志"/> |
 | 🟢 白龙娘（ChatGPT） | ✴ 克劳德大小姐（Claude） |
-| <img src="./assets/card-chatgpt.svg" width="320" alt="ChatGPT Card"/> | <img src="./assets/card-claude.svg" width="320" alt="Claude Card"/> |
+| <img src="./assets/mascots/chatgpt.png" width="320" alt="白龙娘交付日志"/> | <img src="./assets/mascots/claude.png" width="320" alt="克劳德开发手记"/> |
+
+> **素材来源致谢**：四大 AI 娘角色形象与二创灵感来源自 **Zipzipipe** 的 AI 娘形象。
 
 ---
 

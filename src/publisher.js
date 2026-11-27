@@ -6,6 +6,7 @@ import {
   renderCarouselSlidesSvg,
   renderHorizontalCardSvg,
   renderVerticalCardSvg,
+  resolveDefaultMascotPath,
 } from './card-renderer.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { AVAILABLE_STYLES, MODEL_STYLES } from './styles.js';
@@ -31,7 +32,13 @@ function buildStyleVariants(context, defaultFormatted, { heroImageDataUri } = {}
       styleId === defaultFormatted.meta.style
         ? defaultFormatted
         : formatMultiPlatformDevlog(context, { style: styleId });
-    const slides = renderCarouselSlidesSvg(context, formatted, { heroImageDataUri });
+    const defaultMascotPath = !heroImageDataUri ? resolveDefaultMascotPath(styleId) : null;
+    const effectiveHero = heroImageDataUri || (defaultMascotPath ? fileToDataUri(defaultMascotPath) : null);
+    const isMascotCover = Boolean(!heroImageDataUri && defaultMascotPath);
+    const slides = renderCarouselSlidesSvg(context, formatted, {
+      heroImageDataUri: effectiveHero,
+      isMascotCover,
+    });
     variants[styleId] = {
       id: styleId,
       name: MODEL_STYLES[styleId].name,
@@ -56,7 +63,10 @@ function buildStyleVariants(context, defaultFormatted, { heroImageDataUri } = {}
           text: formatted.platforms.github.content,
         },
       },
-      verticalSvg: renderVerticalCardSvg(context, formatted, { heroImageDataUri }),
+      verticalSvg: renderVerticalCardSvg(context, formatted, {
+        heroImageDataUri: effectiveHero,
+        isMascotCover,
+      }),
       horizontalSvg: renderHorizontalCardSvg(context, formatted, { heroImageDataUri }),
       slides,
       imagePrompts: buildAllPlatformImagePrompts(context, { style: styleId }),

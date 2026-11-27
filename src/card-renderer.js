@@ -1,6 +1,18 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { extname } from 'node:path';
+import { dirname, extname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { resolveStyle } from './styles.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const MASCOTS_DIR = join(__dirname, '..', 'assets', 'mascots');
+
+/**
+ * Resolve built-in AI-girl cover artwork path for a given style (credit: Zipzipipe).
+ */
+export function resolveDefaultMascotPath(styleId = 'big_fat_fish') {
+  const candidate = join(MASCOTS_DIR, `${styleId}.png`);
+  return existsSync(candidate) ? candidate : null;
+}
 
 function escapeXml(str = '') {
   return String(str)
@@ -122,9 +134,15 @@ function renderHeroBackdropLayer(heroImageDataUri, width, height, uid) {
 }
 
 /**
- * Render a 3:4 vertical Devlog cover card (1080x1440) with optional AI-generated hero image compositing.
+ * Render a 3:4 vertical Devlog cover card (1080x1440).
+ * When heroImageDataUri is provided, uses a bright Xiaohongshu comic-poster layout
+ * that showcases the AI-girl illustration clearly with crisp top headline & bottom frosted summary card.
  */
-export function renderVerticalCardSvg(context, formatted, { heroImageDataUri } = {}) {
+export function renderVerticalCardSvg(
+  context,
+  formatted,
+  { heroImageDataUri, isMascotCover = false } = {}
+) {
   const theme = resolveStyle(formatted?.meta?.style);
   const project = escapeXml(context.projectName.split('/').pop() || context.projectName);
   const dateStr = escapeXml(formatted.meta.dateStr);
@@ -134,6 +152,45 @@ export function renderVerticalCardSvg(context, formatted, { heroImageDataUri } =
     : context.commits?.map((c) => c.subject) || ['阶段性进展与闭环整理']
   ).slice(0, 4);
   const pitfall = context.pitfalls?.[0];
+
+  if (heroImageDataUri && isMascotCover) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <image href="${heroImageDataUri}" x="0" y="0" width="1080" height="1440" preserveAspectRatio="xMidYMid slice"/>
+  <!-- Bottom minimal pill preserving full artwork & top comic title -->
+  <rect x="64" y="1296" width="952" height="84" rx="42" fill="rgba(255,255,255,0.92)" stroke="#1E293B" stroke-width="5"/>
+  <text x="108" y="1349" fill="#0F172A" font-size="30" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${project} · ${dateStr} · ${statsLine}</text>
+  <text x="1012" y="1418" text-anchor="end" fill="#475569" font-size="20" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">AI 娘形象来源：Zipzipipe · dsh-plugin-devlog-poster</text>
+</svg>
+`;
+  }
+
+  if (heroImageDataUri) {
+    const shortBullets = bullets.slice(0, 2);
+    const bulletTextSvg = shortBullets
+      .map(
+        (item, idx) =>
+          `<text x="116" y="${1222 + idx * 54}" fill="#1E293B" font-size="31" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.bulletIcon)} ${escapeXml(item.length > 26 ? `${item.slice(0, 26)}…` : item)}</text>`
+      )
+      .join('\n');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440">
+  <image href="${heroImageDataUri}" x="0" y="0" width="1080" height="1440" preserveAspectRatio="xMidYMid slice"/>
+  <!-- Top comic-style sticker badge & bold outlined title -->
+  <rect x="72" y="58" width="430" height="58" rx="29" fill="${theme.accentFrom}" stroke="#1E293B" stroke-width="5"/>
+  <text x="104" y="97" fill="#FFFFFF" font-size="28" font-weight="900" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.badgeLabel)} · ${dateStr}</text>
+
+  <text x="72" y="198" fill="#FFFFFF" stroke="#1E293B" stroke-width="14" paint-order="stroke" stroke-linejoin="round" font-size="70" font-weight="900" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${project}</text>
+
+  <!-- Bottom frosted cream comic card -->
+  <rect x="64" y="1096" width="952" height="278" rx="32" fill="rgba(255,255,255,0.92)" stroke="#1E293B" stroke-width="6"/>
+  <text x="116" y="1160" fill="#0F172A" font-size="33" font-weight="800" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">${escapeXml(theme.subtitle.split('·')[0].trim())} · ${statsLine}</text>
+  ${bulletTextSvg}
+  <text x="116" y="1342" fill="#64748B" font-size="24" font-weight="600" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif">dsh-plugin-devlog-poster · ${escapeXml(theme.name)}</text>
+</svg>
+`;
+  }
 
   const bulletBlocks = bullets
     .map((item, idx) => {
@@ -271,7 +328,11 @@ function renderSlideShell({ theme, uid, pageTag, heading, bodySvg, footer, heroI
  * Render a 4-slide 3:4 carousel pack tailored for Xiaohongshu / Douyin multi-image posts:
  * P1 Cover -> P2 Core Updates -> P3 Pitfalls & Lessons -> P4 Next Up & CTA.
  */
-export function renderCarouselSlidesSvg(context, formatted, { heroImageDataUri } = {}) {
+export function renderCarouselSlidesSvg(
+  context,
+  formatted,
+  { heroImageDataUri, isMascotCover = false } = {}
+) {
   const theme = resolveStyle(formatted?.meta?.style);
   const project = context.projectName.split('/').pop() || context.projectName;
   const footer = `${theme.badgeLabel} · ${project} · ${formatted.meta.dateStr}`;
@@ -282,8 +343,8 @@ export function renderCarouselSlidesSvg(context, formatted, { heroImageDataUri }
   const pitfalls = context.pitfalls?.length > 0 ? context.pitfalls : ['把大需求切小，先保证单次闭环可验证'];
   const nextSteps = context.nextSteps?.length > 0 ? context.nextSteps : ['持续迭代并欢迎评论区提需求'];
 
-  // P1 Cover (reuses rich vertical cover)
-  const slide1 = renderVerticalCardSvg(context, formatted, { heroImageDataUri });
+  // P1 Cover (reuses rich vertical cover or built-in AI-girl cover)
+  const slide1 = renderVerticalCardSvg(context, formatted, { heroImageDataUri, isMascotCover });
 
   // P2 Core Updates
   const p2Items = points

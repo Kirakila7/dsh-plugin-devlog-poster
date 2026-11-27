@@ -285,7 +285,8 @@ test('supports big_fat_fish, gemini, chatgpt, and claude styles end-to-end', () 
       const written = writeDevlogBundle(ctx, formatted, { outputDir: join(tmpOut, style) });
       const svgV = readFileSync(written.files.cardVertical, 'utf8');
       assert.ok(svgV.includes('<svg'));
-      assert.ok(svgV.includes(formatted.meta.styleName));
+      assert.ok(svgV.includes('data:image/png;base64,'));
+      assert.ok(svgV.includes('Zipzipipe'));
     }
   } finally {
     rmSync(tmpOut, { recursive: true, force: true });
