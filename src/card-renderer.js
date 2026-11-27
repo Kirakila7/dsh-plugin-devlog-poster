@@ -854,7 +854,14 @@ export function renderCarouselSlidesSvg(
 
   const ctaY = 892;
   const ctaH = 342;
-  const repoLabel = escapeXml(truncateByDisplayWidth(`开源仓库：${context.projectName}`, 32));
+  const repoLabel = escapeXml(truncateByDisplayWidth(`开源仓库：${context.projectName}`, 46));
+  const installCommands = {
+    big_fat_fish: 'dsh plugin add github:Kirakila7/dsh-plugin-devlog-poster',
+    gemini: 'npx skills add Kirakila7/dsh-plugin-devlog-poster',
+    chatgpt: 'npx skills add Kirakila7/dsh-plugin-devlog-poster',
+    claude: 'npx skills add Kirakila7/dsh-plugin-devlog-poster',
+  };
+  const installCmd = installCommands[theme.id] || installCommands.big_fat_fish;
 
   const p4Cta = `
   ${p4Next}
@@ -867,10 +874,10 @@ export function renderCarouselSlidesSvg(
   <text x="212" y="${ctaY + 63}" text-anchor="middle" fill="#FFFFFF" font-size="22" font-weight="900" font-family="${FONT_STACK}">💬 互动时间</text>
 
   <text x="124" y="${ctaY + 138}" fill="${comic.ink}" font-size="40" font-weight="900" font-family="${FONT_STACK}">欢迎评论区点菜 / 催更</text>
-  <text x="124" y="${ctaY + 194}" fill="${comic.muted}" font-size="28" font-weight="700" font-family="${FONT_STACK}">${repoLabel}</text>
+  <text x="124" y="${ctaY + 194}" fill="${comic.muted}" font-size="24" font-weight="700" font-family="${FONT_STACK}">${repoLabel}</text>
 
   <rect x="124" y="${ctaY + 230}" width="590" height="66" rx="18" fill="#FFFFFF" stroke="${comic.ink}" stroke-width="3.5"/>
-  <text x="142" y="${ctaY + 270}" fill="${comic.ink}" font-size="16" font-weight="700" font-family="${MONO_STACK}">dsh plugin add github:Kirakila7/dsh-plugin-devlog-poster</text>
+  <text x="142" y="${ctaY + 270}" fill="${comic.ink}" font-size="16" font-weight="700" font-family="${MONO_STACK}">${escapeXml(installCmd)}</text>
 
   <!-- Right column: crisp white comic medallion hosting mini mascot emblem -->
   <circle cx="858" cy="${ctaY + 177}" r="92" fill="${comic.shadow}"/>
