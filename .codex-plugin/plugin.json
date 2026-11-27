@@ -1,21 +1,48 @@
 {
   "name": "devlog-poster",
   "version": "0.8.0",
-  "description": "Build-in-Public devlog, 4-slide Xiaohongshu/Douyin/Bilibili/GitHub carousel packs with 4 AI-girl styles, and multi-repo daily/weekly team work reports at zero extra LLM API cost.",
-  "skills": [
-    "skills/devlog-poster"
-  ],
+  "description": "Generate multi-platform devlogs, 4-slide visual cards, and daily or weekly work reports from single or multi-repo git commits.",
+  "author": {
+    "name": "Kirakila7",
+    "url": "https://github.com/Kirakila7"
+  },
+  "homepage": "https://github.com/Kirakila7/dsh-plugin-devlog-poster",
   "repository": "https://github.com/Kirakila7/dsh-plugin-devlog-poster",
   "license": "MIT",
   "keywords": [
     "codex-plugin",
-    "agent-skill",
     "devlog",
     "build-in-public",
     "work-report",
+    "multi-repo",
     "xiaohongshu",
     "bilibili",
     "douyin",
     "github"
-  ]
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Devlog Poster",
+    "shortDescription": "Turn git commits into multi-platform devlogs, 4-slide visual cards, and daily/weekly work reports",
+    "longDescription": "Zero-dependency Build-in-Public devlog and work-report workflow supporting single-repo and multi-repo git aggregation, 4 AI-girl persona styles, interactive 5-tab HTML workbench, GitHub releases, Playwright draft saving, image prompt templates, and 6-channel team webhooks.",
+    "developerName": "Kirakila7",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Kirakila7/dsh-plugin-devlog-poster",
+    "defaultPrompt": [
+      "Summarize today's git commits into a multi-platform devlog with 4-slide visual cards and open the preview workbench"
+    ],
+    "screenshots": [
+      "./assets/mascots/big_fat_fish.png",
+      "./assets/mascots/gemini.png",
+      "./assets/mascots/chatgpt.png",
+      "./assets/mascots/claude.png"
+    ],
+    "brandColor": "#2563EB",
+    "logo": "./assets/mascots/big_fat_fish.png"
+  }
 }

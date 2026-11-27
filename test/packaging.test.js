@@ -53,7 +53,8 @@ test('all packaging JSON manifests parse cleanly and share version 0.8.0', () =>
   assert.equal(codexPlugin.name, 'devlog-poster');
   assert.equal(typeof codexPlugin.description, 'string');
   assert.ok(codexPlugin.description.length > 20);
-  assert.deepEqual(codexPlugin.skills, ['skills/devlog-poster']);
+  assert.equal(codexPlugin.skills, './skills/');
+  assert.ok(codexPlugin.interface?.displayName);
   assert.ok(existsSync(resolve(ROOT, 'skills/devlog-poster/SKILL.md')));
   assert.equal(codexPlugin.license, 'MIT');
   assert.ok(Array.isArray(codexPlugin.keywords) && codexPlugin.keywords.length > 0);
