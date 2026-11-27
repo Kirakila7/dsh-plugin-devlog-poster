@@ -10,6 +10,7 @@ import {
 } from './image-gen.js';
 import { loadConfig, saveConfig } from './config.js';
 import { resolveStyle } from './styles.js';
+import { mergeAiSummary, summarizeWithAI } from './ai-summarizer.js';
 
 export const name = 'dsh-plugin-devlog-poster';
 export const inject = ['tools'];
@@ -48,6 +49,11 @@ function renderGenerateBundle(value) {
 
   if (value?.meta?.statsLine) {
     lines.push(`- **改动概览**：${value.meta.statsLine}`);
+  }
+  if (value?.aiSummary?.ok) {
+    lines.push(`- **AI 摘要**：已通过 \`${value.aiSummary.provider}/${value.aiSummary.model}\` 自动提炼`);
+  } else if (value?.aiSummary && value.aiSummary.ok === false) {
+    lines.push(`- **AI 摘要回退**：${value.aiSummary.message || value.aiSummary.reason}（已平滑回退到 Git 提交记录）`);
   }
 
   lines.push(
@@ -277,6 +283,32 @@ function createToolSpecs(runtimeConfig = {}) {
           required: false,
           description: 'Optional AI-generated PNG/JPG hero illustration to composite behind card typography.',
         },
+        useAiSummary: {
+          type: 'boolean',
+          required: false,
+          description:
+            'Optionally invoke external AI summarizer on git log & diff to auto-fill highlights/pitfalls/nextSteps (gracefully falls back if no API key).',
+        },
+        aiProvider: {
+          type: 'string',
+          required: false,
+          description: 'AI summarizer provider: auto | deepseek | openai | gemini | anthropic | custom_openai.',
+        },
+        aiModel: {
+          type: 'string',
+          required: false,
+          description: 'Optional AI summarizer model override.',
+        },
+        aiEndpoint: {
+          type: 'string',
+          required: false,
+          description: 'Optional AI summarizer HTTP endpoint override.',
+        },
+        aiApiKey: {
+          type: 'string',
+          required: false,
+          description: 'Optional AI summarizer API key override.',
+        },
       },
       output: {
         schema: { type: 'object' },
@@ -288,11 +320,47 @@ function createToolSpecs(runtimeConfig = {}) {
         ],
       },
       async execute(args = {}) {
-        const context = collectGitContext(args);
+        const style = args.style || config.defaultStyle || 'big_fat_fish';
+        let context = collectGitContext(args);
+        let title = args.title;
+        let aiSummary = null;
+
+        if (args.useAiSummary) {
+          aiSummary = await summarizeWithAI({
+            context,
+            repoPath: args.repoPath || context.repoPath,
+            since: args.since || context.since,
+            style,
+            mode: 'devlog',
+            provider: args.aiProvider || config.aiProvider || 'auto',
+            model: args.aiModel || config.aiModel || undefined,
+            endpoint: args.aiEndpoint || config.aiEndpoint || undefined,
+            apiKey: args.aiApiKey || config.aiApiKey || undefined,
+          });
+          if (aiSummary.ok && aiSummary.summary) {
+            const merged = mergeAiSummary(
+              {
+                title,
+                highlights: context.highlights,
+                pitfalls: context.pitfalls,
+                nextSteps: context.nextSteps,
+              },
+              aiSummary.summary
+            );
+            context = {
+              ...context,
+              highlights: merged.highlights,
+              pitfalls: merged.pitfalls,
+              nextSteps: merged.nextSteps,
+            };
+            title = merged.title;
+          }
+        }
+
         const formatted = formatMultiPlatformDevlog(context, {
-          title: args.title,
+          title,
           xhsTitle: args.xhsTitle,
-          style: args.style || config.defaultStyle || 'big_fat_fish',
+          style,
         });
         const written = writeDevlogBundle(context, formatted, {
           outputDir: args.outputDir || defaultOutputDir,
@@ -302,6 +370,7 @@ function createToolSpecs(runtimeConfig = {}) {
           ...written,
           meta: formatted.meta,
           platforms: formatted.platforms,
+          ...(aiSummary ? { aiSummary } : {}),
         };
       },
     },
@@ -475,6 +544,32 @@ function createToolSpecs(runtimeConfig = {}) {
           required: false,
           description: 'Preview payload without sending HTTP request (default: true).',
         },
+        useAiSummary: {
+          type: 'boolean',
+          required: false,
+          description:
+            'Optionally invoke external AI summarizer on git log & diff to auto-fill report items (gracefully falls back if no API key).',
+        },
+        aiProvider: {
+          type: 'string',
+          required: false,
+          description: 'AI summarizer provider: auto | deepseek | openai | gemini | anthropic | custom_openai.',
+        },
+        aiModel: {
+          type: 'string',
+          required: false,
+          description: 'Optional AI summarizer model override.',
+        },
+        aiEndpoint: {
+          type: 'string',
+          required: false,
+          description: 'Optional AI summarizer HTTP endpoint override.',
+        },
+        aiApiKey: {
+          type: 'string',
+          required: false,
+          description: 'Optional AI summarizer API key override.',
+        },
       },
       output: {
         schema: { type: 'object' },
@@ -488,8 +583,43 @@ function createToolSpecs(runtimeConfig = {}) {
       async execute(args = {}) {
         const period = args.period === 'weekly' ? 'weekly' : 'daily';
         const since = args.since || (period === 'weekly' ? '7 days ago' : '24 hours ago');
-        const context = collectGitContext({ ...args, since });
-        const report = formatWorkReport(context, { period, title: args.title });
+        let context = collectGitContext({ ...args, since });
+        let title = args.title;
+        let aiSummary = null;
+
+        if (args.useAiSummary) {
+          aiSummary = await summarizeWithAI({
+            context,
+            repoPath: args.repoPath || context.repoPath,
+            since,
+            style: args.style || config.defaultStyle || 'big_fat_fish',
+            mode: 'report',
+            provider: args.aiProvider || config.aiProvider || 'auto',
+            model: args.aiModel || config.aiModel || undefined,
+            endpoint: args.aiEndpoint || config.aiEndpoint || undefined,
+            apiKey: args.aiApiKey || config.aiApiKey || undefined,
+          });
+          if (aiSummary.ok && aiSummary.summary) {
+            const merged = mergeAiSummary(
+              {
+                title,
+                highlights: context.highlights,
+                pitfalls: context.pitfalls,
+                nextSteps: context.nextSteps,
+              },
+              aiSummary.summary
+            );
+            context = {
+              ...context,
+              highlights: merged.highlights,
+              pitfalls: merged.pitfalls,
+              nextSteps: merged.nextSteps,
+            };
+            title = merged.title;
+          }
+        }
+
+        const report = formatWorkReport(context, { period, title });
         const sent = await sendWorkReport({
           channel: args.channel || config.defaultReportChannel || 'feishu',
           endpoint: args.endpoint || config.reportEndpoint,
@@ -499,7 +629,7 @@ function createToolSpecs(runtimeConfig = {}) {
           report,
           dryRun: args.dryRun !== false,
         });
-        return { ...sent, report };
+        return { ...sent, report, ...(aiSummary ? { aiSummary } : {}) };
       },
     },
     {
@@ -621,6 +751,7 @@ export {
   buildImagePrompt,
   buildAllPlatformImagePrompts,
   generateVisualImage,
+  summarizeWithAI,
   loadConfig,
   saveConfig,
 };

@@ -18,6 +18,12 @@ import {
   SUPPORTED_IMAGE_PROVIDERS,
 } from './image-gen.js';
 import {
+  getAiKeyStatus,
+  mergeAiSummary,
+  summarizeWithAI,
+  SUPPORTED_AI_PROVIDERS,
+} from './ai-summarizer.js';
+import {
   CONFIG_KEYS,
   inspectConfig,
   loadConfig,
@@ -54,6 +60,10 @@ const VALUE_FLAGS = new Map([
   ['--api-key', 'apiKey'],
   ['--output', 'outputPath'],
   ['--hero-image', 'heroImagePath'],
+  ['--ai-provider', 'aiProvider'],
+  ['--ai-model', 'aiModel'],
+  ['--ai-endpoint', 'aiEndpoint'],
+  ['--ai-api-key', 'aiApiKey'],
 ]);
 
 const ARRAY_FLAGS = new Map([
@@ -63,6 +73,7 @@ const ARRAY_FLAGS = new Map([
 ]);
 
 const BOOLEAN_FLAGS = new Map([
+  ['--ai', 'ai'],
   ['--execute', 'execute'],
   ['--open', 'open'],
   ['--local', 'local'],
@@ -268,7 +279,7 @@ Usage:
   devlog-poster doctor [--repo <path>] [--json]
   devlog-poster publish-github [--mode devlog_file|release] [--tag <tag>] [--gh-repo <owner/repo>] [--execute]
   devlog-poster save-draft [--platform xiaohongshu|bilibili|douyin] [--bundle <dir>] [--profile-dir <dir>] [--execute]
-  devlog-poster send-report [--channel feishu|dingtalk|wecom|slack|discord|qq_onebot] [--period daily|weekly] [--endpoint <url>] [--token <tok>] [--group-id <id>] [--user-id <id>] [--execute]
+  devlog-poster send-report [--channel feishu|dingtalk|wecom|slack|discord|qq_onebot] [--period daily|weekly] [--ai] [--endpoint <url>] [--token <tok>] [--group-id <id>] [--user-id <id>] [--execute]
   devlog-poster generate-image [--platform xiaohongshu|bilibili|douyin|github] [--provider openai|gemini|volcengine|custom_openai|svg_fallback] [--style <id>] [--model <name>] [--endpoint <url>] [--api-key <key>] [--output <file>] [--execute]
   devlog-poster config show [--repo <path>] [--json]
   devlog-poster config set <key> <value> [--local] [--repo <path>]
@@ -276,6 +287,11 @@ Usage:
 
 Common Generate Options:
   --open                       Open preview.html in default browser after generating
+  --ai                         Auto-summarize git log & diff via LLM (falls back to git commits if no key)
+  --ai-provider <id>           auto (default) | deepseek | openai | gemini | anthropic | custom_openai
+  --ai-model <name>            Override AI summarizer model name
+  --ai-endpoint <url>          Override AI summarizer HTTP endpoint
+  --ai-api-key <key>           Override AI summarizer API key
   --style <id>                 big_fat_fish (default) | gemini | chatgpt | claude
                                (aliases: fish, hakimi, gpt)
   --repo <path>                Local git repository path (default: cwd)
@@ -292,6 +308,7 @@ Common Generate Options:
 
 Quick Examples:
   node src/cli.js generate --open
+  node src/cli.js generate --ai --open
   node src/cli.js doctor
   node src/cli.js config set defaultStyle gemini --local
   node src/cli.js save-draft --platform xiaohongshu
@@ -393,7 +410,21 @@ async function runDoctor(opts, savedCfg) {
         : 'node src/cli.js config set reportEndpoint <webhook_url>',
   });
 
-  // 6. Image API key readiness (optional)
+  // 6. AI summarizer (--ai) key readiness (optional)
+  const aiStatus = getAiKeyStatus({ config: savedCfg });
+  checks.push({
+    id: 'ai_summarizer',
+    label: `AI summarizer (--ai / ${aiStatus.provider || aiStatus.requestedProvider})`,
+    status: aiStatus.configured ? 'ok' : 'warn',
+    detail: aiStatus.configured
+      ? `ready (${aiStatus.provider}/${aiStatus.model} via ${aiStatus.source})`
+      : 'no API key (optional; --ai falls back to git commits, or use Antigravity/Codex/Claude Code skill)',
+    hint: aiStatus.configured
+      ? ''
+      : 'export DEEPSEEK_API_KEY=<key> (or OPENAI_API_KEY / GEMINI_API_KEY / ANTHROPIC_API_KEY)',
+  });
+
+  // 7. Image API key readiness (optional)
   const provider = savedCfg.imageProvider || 'openai';
   const envKeyName =
     provider === 'gemini'
@@ -592,6 +623,94 @@ function inferErrorHint(err, command) {
   return 'Run `node src/cli.js --help` or `node src/cli.js doctor` to inspect your setup';
 }
 
+async function maybeEnrichContextWithAI({
+  opts,
+  savedCfg,
+  context,
+  repoPath,
+  since,
+  style = 'big_fat_fish',
+  mode = 'devlog',
+  silentStdout = false,
+}) {
+  if (!opts.ai) {
+    return { context, title: opts.title, aiSummary: null };
+  }
+
+  const aiProvider = String(opts.aiProvider || savedCfg.aiProvider || 'auto').trim().toLowerCase();
+  if (!SUPPORTED_AI_PROVIDERS.includes(aiProvider)) {
+    throw new CliError(
+      `Unsupported AI provider "${aiProvider}". Valid: ${SUPPORTED_AI_PROVIDERS.join(', ')}`,
+      'node src/cli.js generate --ai --ai-provider deepseek'
+    );
+  }
+
+  const aiRes = await summarizeWithAI({
+    context,
+    repoPath,
+    since,
+    style,
+    mode,
+    provider: aiProvider,
+    model: opts.aiModel || savedCfg.aiModel || undefined,
+    endpoint: opts.aiEndpoint || savedCfg.aiEndpoint || undefined,
+    apiKey: opts.aiApiKey || savedCfg.aiApiKey || undefined,
+  });
+
+  if (aiRes.ok && aiRes.summary) {
+    const merged = mergeAiSummary(
+      {
+        title: opts.title,
+        highlights: context.highlights,
+        pitfalls: context.pitfalls,
+        nextSteps: context.nextSteps,
+      },
+      aiRes.summary
+    );
+    const enrichedContext = {
+      ...context,
+      highlights: merged.highlights,
+      pitfalls: merged.pitfalls,
+      nextSteps: merged.nextSteps,
+    };
+    if (!silentStdout) {
+      console.log(
+        `🤖 AI summary generated via ${aiRes.provider}/${aiRes.model} (${merged.highlights.length} highlights · ${merged.pitfalls.length} pitfalls · ${merged.nextSteps.length} next)`
+      );
+    }
+    return {
+      context: enrichedContext,
+      title: merged.title,
+      aiSummary: {
+        requested: true,
+        ok: true,
+        provider: aiRes.provider,
+        model: aiRes.model,
+      },
+    };
+  }
+
+  const logNotice = silentStdout ? console.error : console.log;
+  logNotice(
+    `⚠️  AI summary fallback (${aiRes.reason || 'UNAVAILABLE'}): ${aiRes.message} Continuing with git commits.`
+  );
+  if (aiRes.hint) {
+    logNotice(`💡 Try: ${aiRes.hint}`);
+  }
+  return {
+    context,
+    title: opts.title,
+    aiSummary: {
+      requested: true,
+      ok: false,
+      provider: aiRes.provider,
+      reason: aiRes.reason,
+      message: aiRes.message,
+      hint: aiRes.hint,
+    },
+  };
+}
+
 export async function main(argv = process.argv.slice(2)) {
   const { command, opts } = parseArgs(argv);
 
@@ -672,15 +791,27 @@ export async function main(argv = process.argv.slice(2)) {
         'node src/cli.js send-report --channel feishu --period daily'
       );
     }
-    const context = collectGitContext({
+    const since = opts.since || (period === 'weekly' ? '7 days ago' : '24 hours ago');
+    const rawContext = collectGitContext({
       repoPath,
       projectName: opts.projectName,
-      since: opts.since || (period === 'weekly' ? '7 days ago' : '24 hours ago'),
+      since,
       highlights: opts.highlights,
       pitfalls: opts.pitfalls,
       nextSteps: opts.nextSteps,
     });
-    const report = formatWorkReport(context, { period, title: opts.title });
+    const style = resolveCliStyle(opts.style, savedCfg.defaultStyle);
+    const { context, title, aiSummary } = await maybeEnrichContextWithAI({
+      opts,
+      savedCfg,
+      context: rawContext,
+      repoPath,
+      since,
+      style,
+      mode: 'report',
+      silentStdout: true,
+    });
+    const report = formatWorkReport(context, { period, title });
     const result = await sendWorkReport({
       channel,
       endpoint: opts.endpoint || savedCfg.reportEndpoint || undefined,
@@ -690,7 +821,9 @@ export async function main(argv = process.argv.slice(2)) {
       report,
       dryRun: opts.dryRun !== false,
     });
-    console.log(JSON.stringify(result, null, 2));
+    console.log(
+      JSON.stringify(aiSummary ? { ...result, aiSummary } : result, null, 2)
+    );
     return;
   }
 
@@ -725,17 +858,29 @@ export async function main(argv = process.argv.slice(2)) {
 
   if (command === 'generate' || command === 'publish-github') {
     const style = resolveCliStyle(opts.style, savedCfg.defaultStyle);
-    const context = collectGitContext({
+    const since = opts.since || '24 hours ago';
+    const rawContext = collectGitContext({
       repoPath,
       projectName: opts.projectName,
-      since: opts.since || '24 hours ago',
+      since,
       highlights: opts.highlights,
       pitfalls: opts.pitfalls,
       nextSteps: opts.nextSteps,
     });
 
+    const { context, title, aiSummary } = await maybeEnrichContextWithAI({
+      opts,
+      savedCfg,
+      context: rawContext,
+      repoPath,
+      since,
+      style,
+      mode: 'devlog',
+      silentStdout: Boolean(opts.json || command === 'publish-github'),
+    });
+
     const formatted = formatMultiPlatformDevlog(context, {
-      title: opts.title,
+      title,
       style,
     });
 
@@ -770,6 +915,7 @@ export async function main(argv = process.argv.slice(2)) {
               bundleDir,
               files,
               opened: Boolean(opts.open && openResult?.ok && !openResult?.skipped),
+              ...(aiSummary ? { aiSummary } : {}),
             },
             null,
             2

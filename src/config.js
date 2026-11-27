@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { AVAILABLE_STYLES } from './styles.js';
 import { SUPPORTED_REPORT_CHANNELS } from './work-report.js';
 import { SUPPORTED_IMAGE_PROVIDERS } from './image-gen.js';
+import { SUPPORTED_AI_PROVIDERS } from './ai-summarizer.js';
 
 export const DEFAULT_CONFIG_PATH = join(homedir(), '.dsh-devlog-poster', 'config.json');
 export const LOCAL_CONFIG_FILENAME = '.devlog-poster.json';
@@ -11,6 +12,9 @@ export const LOCAL_CONFIG_FILENAME = '.devlog-poster.json';
 export const DEFAULT_CONFIG = {
   defaultStyle: 'big_fat_fish',
   outputDir: 'out',
+  aiProvider: 'auto',
+  aiModel: '',
+  aiEndpoint: '',
   imageProvider: 'openai',
   imageModel: '',
   imageEndpoint: '',
@@ -20,12 +24,13 @@ export const DEFAULT_CONFIG = {
   qqUserId: '',
 };
 
-export const SECRET_CONFIG_KEYS = ['reportToken', 'imageApiKey'];
+export const SECRET_CONFIG_KEYS = ['reportToken', 'imageApiKey', 'aiApiKey'];
 
 export const CONFIG_KEYS = [
   ...Object.keys(DEFAULT_CONFIG),
   'reportToken',
   'imageApiKey',
+  'aiApiKey',
   'browserProfileDir',
   'ghBin',
 ];
@@ -132,6 +137,18 @@ export function validateConfigPatch(patch = {}) {
         continue;
       }
       normalized[key] = value;
+      continue;
+    }
+
+    if (key === 'aiProvider') {
+      const normalizedProvider = String(value).toLowerCase();
+      if (!SUPPORTED_AI_PROVIDERS.includes(normalizedProvider)) {
+        errors.push(
+          `Invalid aiProvider "${value}". Valid providers: ${SUPPORTED_AI_PROVIDERS.join(', ')}`
+        );
+        continue;
+      }
+      normalized[key] = normalizedProvider;
       continue;
     }
 

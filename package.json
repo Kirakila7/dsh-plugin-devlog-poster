@@ -22,6 +22,7 @@
   "files": [
     "src",
     "assets",
+    "skills",
     "cordis.patch.yml",
     "screenshots.json",
     "README.md"

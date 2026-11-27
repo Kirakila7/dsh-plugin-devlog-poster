@@ -46,6 +46,42 @@ node src/cli.js doctor
 
 ---
 
+## 🤖 Antigravity / Codex / Claude Code Skill（零额外 API 费用）
+
+仓库内置通用 Agent Skill：[skills/devlog-poster/SKILL.md](./skills/devlog-poster/SKILL.md)。在 **Antigravity / Codex / Claude Code** 中安装后，直接对 Agent 说「帮我写今天的开发日志 / 发小红书 / 写工作日报」，Agent 会**直接使用自身推理能力（零额外 LLM API 费用）**读取当前仓库 `git log`、`git diff --stat` 与对话上下文，提炼出像真人写的亮点、踩坑与下一步，再调用 CLI 一键生成 4 平台文案与 4 图轮播卡片并打开预览页。
+
+```bash
+# 链接到当前项目或全局 Agent Skills 目录（Antigravity / Codex / Claude Code 通用）
+mkdir -p ~/.agents/skills && ln -s "$(pwd)/skills/devlog-poster" ~/.agents/skills/devlog-poster
+# Claude Code 用户也可同步链接到 ~/.claude/skills/devlog-poster
+mkdir -p ~/.claude/skills && ln -s "$(pwd)/skills/devlog-poster" ~/.claude/skills/devlog-poster
+```
+
+---
+
+## ✨ CLI `--ai` 自动摘要（独立终端直出）
+
+不在 Agent 会话里、直接跑终端 CLI？加上 `--ai` 即可零依赖调用原生 `fetch` 读取 `git log --stat` 与代码 diff，按所选 AI 娘风格自动提炼 `title / highlights / pitfalls / nextSteps`：
+
+- **自动探测顺序**：`DEEPSEEK_API_KEY` → `OPENAI_API_KEY` → `GEMINI_API_KEY` → `ANTHROPIC_API_KEY`（也支持 `custom_openai` 自定义兼容端点）
+- **平滑兜底**：未配置 API Key 或请求失败时**绝不崩溃**，自动回退到 Git 提交记录并给出配置提示
+
+```bash
+# 自动探测环境变量中的 API Key 并生成（支持 --style 风格联动）
+export DEEPSEEK_API_KEY=sk-xxx
+node src/cli.js generate --ai --style big_fat_fish --open
+
+# 指定 Provider / Model，或在日报/周报中启用 AI 摘要
+node src/cli.js generate --ai --ai-provider gemini --ai-model gemini-2.0-flash --open
+node src/cli.js send-report --ai --channel feishu --period daily
+
+# 持久化 AI 配置（config show 自动脱敏 aiApiKey）
+node src/cli.js config set aiProvider deepseek
+node src/cli.js config set aiApiKey sk-xxx
+```
+
+---
+
 ## 安装为 DSH 插件
 
 推送到 GitHub 后，可通过 DSH CLI 安装：
