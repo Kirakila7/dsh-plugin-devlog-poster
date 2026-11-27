@@ -143,12 +143,60 @@ function buildStyleVariants(context, defaultFormatted, { heroImageDataUri } = {}
   return variants;
 }
 
+function deduplicatePreviewVariants(variants) {
+  const mascotDataUris = {};
+  const uriToKey = new Map();
+
+  function registerDataUri(dataUri, preferredKey) {
+    const existing = uriToKey.get(dataUri);
+    if (existing) return existing;
+    let key = preferredKey;
+    let suffix = 1;
+    while (Object.prototype.hasOwnProperty.call(mascotDataUris, key)) {
+      key = `${preferredKey}_${suffix}`;
+      suffix += 1;
+    }
+    mascotDataUris[key] = dataUri;
+    uriToKey.set(dataUri, key);
+    return key;
+  }
+
+  function stripInlineImages(svg, styleId) {
+    if (!svg || !svg.includes('data:image/')) return svg;
+    return svg.replace(
+      /<image\b([^>]*?)\bhref="(data:image\/[^"]+)"([^>]*?)(\/?)>/g,
+      (match, before, dataUri, after, selfClose) => {
+        const isMascotCover = /data-mascot-cover="1"/.test(before) || /data-mascot-cover="1"/.test(after);
+        const preferredKey = isMascotCover ? styleId : 'custom_hero';
+        const key = registerDataUri(dataUri, preferredKey);
+        return `<image${before}data-mascot-id="${key}" href=""${after}${selfClose}>`;
+      }
+    );
+  }
+
+  const previewVariants = {};
+  for (const [styleId, variant] of Object.entries(variants)) {
+    previewVariants[styleId] = {
+      ...variant,
+      verticalSvg: stripInlineImages(variant.verticalSvg, styleId),
+      horizontalSvg: stripInlineImages(variant.horizontalSvg, styleId),
+      slides: (variant.slides || []).map((slide) => ({
+        ...slide,
+        svg: stripInlineImages(slide.svg, styleId),
+      })),
+    };
+  }
+
+  return { previewVariants, mascotDataUris };
+}
+
 function buildPreviewHtml(defaultStyleId, variants, workReport) {
-  const initial = variants[defaultStyleId] || variants.big_fat_fish;
+  const { previewVariants, mascotDataUris } = deduplicatePreviewVariants(variants);
+  const initial = previewVariants[defaultStyleId] || previewVariants.big_fat_fish;
   const wb = initial.theme;
 
   const switcherButtons = AVAILABLE_STYLES.map((id) => {
-    const item = variants[id];
+    const item = previewVariants[id];
     const activeClass = id === initial.id ? 'style-btn active' : 'style-btn';
     return `<button type="button" class="${activeClass}" data-style="${id}" onclick="switchStyle('${id}')"><span class="style-dot" style="background:${item.theme.dotColor}"></span><span>${escapeHtml(item.emoji)} ${escapeHtml(item.shortName)}</span></button>`;
   }).join('\n          ');
@@ -1188,11 +1236,25 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
   <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
 
   <script>
-    window.__DEVLOG_VARIANTS__ = ${safeJsonForScript(variants)};
+    window.__MASCOT_DATA_URIS__ = ${safeJsonForScript(mascotDataUris)};
+    window.__DEVLOG_VARIANTS__ = ${safeJsonForScript(previewVariants)};
     window.__CURRENT_STYLE__ = ${JSON.stringify(initial.id)};
     window.__CURRENT_TAB__ = 'visuals';
     window.__PHONE_SLIDE_INDEX__ = 0;
     window.__CUSTOM_HERO_URI__ = null;
+
+    function hydrateMascotImages(root) {
+      const scope = root || document;
+      const registry = window.__MASCOT_DATA_URIS__ || {};
+      scope.querySelectorAll('image[data-mascot-id]').forEach((img) => {
+        if (img.getAttribute('data-local-hero') === '1') return;
+        const id = img.getAttribute('data-mascot-id');
+        const uri = id && registry[id];
+        if (uri && img.getAttribute('href') !== uri) {
+          img.setAttribute('href', uri);
+        }
+      });
+    }
 
     function showToast(message, tone = 'info') {
       const stack = document.getElementById('toast-stack');
@@ -1420,6 +1482,7 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
         const box = document.getElementById('svg-slide-' + idx);
         if (box) box.innerHTML = slide.svg;
       });
+      hydrateMascotImages(document.getElementById('workspace'));
       if (window.__CUSTOM_HERO_URI__) {
         patchHeroOnContainer('svg-vertical', window.__CUSTOM_HERO_URI__);
         patchHeroOnContainer('svg-slide-0', window.__CUSTOM_HERO_URI__);
@@ -1459,6 +1522,7 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       if (slide0 && v.slides[0]) {
         slide0.innerHTML = v.slides[0].svg;
       }
+      hydrateMascotImages(document.getElementById('workspace'));
       ['hero-file-input', 'hero-file-input-alt'].forEach((id) => {
         const input = document.getElementById(id);
         if (input) input.value = '';
@@ -1516,6 +1580,7 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
           reject(new Error('SVG not found: ' + containerId));
           return;
         }
+        hydrateMascotImages(svgEl);
         const xml = new XMLSerializer().serializeToString(svgEl);
         const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
         const url = URL.createObjectURL(blob);
@@ -1623,6 +1688,7 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
     });
 
     // Initial live hydration
+    hydrateMascotImages(document.getElementById('workspace'));
     updateCharCounts();
     syncPhoneCaption();
     renderPhoneSlide();

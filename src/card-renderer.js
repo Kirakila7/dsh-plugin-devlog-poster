@@ -228,68 +228,113 @@ export function fileToDataUri(imagePath) {
 }
 
 function renderMascotSvg(styleId, x, y, scale = 1, uid = 'v') {
+  // All 4 icons are drawn in a normalized 200x200 coordinate space centered at (100, 100)
+  // matching the bold dark-ink chibi comic sticker icons on the 4 official AI-girl covers.
   if (styleId === 'gemini') {
     return `
-  <g transform="translate(${x}, ${y}) scale(${scale})">
+  <g data-mascot-icon="gemini" transform="translate(${x}, ${y}) scale(${scale})">
     <defs>
-      <linearGradient id="gemStar_${uid}" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#60A5FA"/>
+      <linearGradient id="gemOuter_${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#C4B5FD"/>
         <stop offset="55%" stop-color="#A78BFA"/>
-        <stop offset="100%" stop-color="#F472B6"/>
+        <stop offset="100%" stop-color="#8B5CF6"/>
+      </linearGradient>
+      <linearGradient id="gemCore_${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#FEF08A"/>
+        <stop offset="55%" stop-color="#FCD34D"/>
+        <stop offset="100%" stop-color="#F59E0B"/>
       </linearGradient>
     </defs>
-    <circle cx="110" cy="95" r="72" fill="#818CF8" opacity="0.18"/>
-    <path d="M110 18 C118 68, 142 88, 192 95 C142 102, 118 122, 110 172 C102 122, 78 102, 28 95 C78 88, 102 68, 110 18 Z" fill="url(#gemStar_${uid})" stroke="#2E1065" stroke-width="5" stroke-linejoin="round"/>
-    <path d="M188 26 C191 42, 198 49, 214 52 C198 55, 191 62, 188 78 C185 62, 178 55, 162 52 C178 49, 185 42, 188 26 Z" fill="#FDE047" stroke="#2E1065" stroke-width="3.5" stroke-linejoin="round"/>
+    <!-- Bold dark-ink 4-point sparkle sticker with lavender outer rim & golden core -->
+    <path d="M96 22 C104 68, 128 92, 174 100 C128 108, 104 132, 96 178 C88 132, 64 108, 18 100 C64 92, 88 68, 96 22 Z" fill="url(#gemOuter_${uid})" stroke="#2E1065" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M96 48 C102 78, 118 94, 148 100 C118 106, 102 122, 96 152 C90 122, 74 106, 44 100 C74 94, 90 78, 96 48 Z" fill="url(#gemCore_${uid})"/>
+    <!-- Tiny companion sparkle accent -->
+    <path d="M156 36 C158 46, 163 51, 173 53 C163 55, 158 60, 156 70 C154 60, 149 55, 139 53 C149 51, 154 46, 156 36 Z" fill="#FDE047" stroke="#2E1065" stroke-width="5" stroke-linejoin="round"/>
   </g>`;
   }
 
   if (styleId === 'chatgpt') {
     return `
-  <g transform="translate(${x}, ${y}) scale(${scale})">
-    <circle cx="112" cy="96" r="70" fill="#10A37F" opacity="0.18"/>
-    <g fill="none" stroke="#10B981" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" transform="translate(112, 96)">
-      <polygon points="0,-54 47,-27 47,27 0,54 -47,27 -47,-27"/>
-      <polygon points="0,-28 24,-14 24,14 0,28 -24,14 -24,-14" stroke="#14532D" stroke-width="6"/>
-      <line x1="0" y1="-54" x2="0" y2="-28"/>
-      <line x1="47" y1="-27" x2="24" y2="-14"/>
-      <line x1="47" y1="27" x2="24" y2="14"/>
-      <line x1="0" y1="54" x2="0" y2="28"/>
-      <line x1="-47" y1="27" x2="-24" y2="14"/>
-      <line x1="-47" y1="-27" x2="-24" y2="-14"/>
+  <g data-mascot-icon="chatgpt" transform="translate(${x}, ${y}) scale(${scale})">
+    <defs>
+      <linearGradient id="gptMint_${uid}" x1="0.15" y1="0.1" x2="0.85" y2="0.95">
+        <stop offset="0%" stop-color="#D1FAE5"/>
+        <stop offset="48%" stop-color="#A7F3D0"/>
+        <stop offset="100%" stop-color="#6EE7B7"/>
+      </linearGradient>
+    </defs>
+    <!-- 3 comic burst ticks on top-left -->
+    <g stroke="#14532D" stroke-width="7.5" stroke-linecap="round">
+      <line x1="65" y1="22" x2="70" y2="38"/>
+      <line x1="36" y1="39" x2="49" y2="51"/>
+      <line x1="22" y1="68" x2="38" y2="73"/>
     </g>
+    <!-- Cute bold-outlined mint-green round smiling blob -->
+    <circle cx="106" cy="108" r="64" fill="url(#gptMint_${uid})" stroke="#14532D" stroke-width="8"/>
+    <ellipse cx="82" cy="76" rx="18" ry="10" transform="rotate(-24 82 76)" fill="#ECFDF5" opacity="0.85"/>
+    <!-- Tiny vertical dot eyes + happy open smile -->
+    <ellipse cx="94" cy="103" rx="5.5" ry="9" fill="#14532D"/>
+    <ellipse cx="132" cy="101" rx="5.5" ry="9" fill="#14532D"/>
+    <path d="M105 114 L123 113 C123 126, 118 131, 114 131 C109 131, 105 125, 105 114 Z" fill="#FB7185" stroke="#14532D" stroke-width="4.5" stroke-linejoin="round"/>
   </g>`;
   }
 
   if (styleId === 'claude') {
     return `
-  <g transform="translate(${x}, ${y}) scale(${scale})">
-    <circle cx="112" cy="96" r="70" fill="#EA580C" opacity="0.16"/>
-    <g transform="translate(112, 96)" stroke="#EA580C" stroke-width="11" stroke-linecap="round">
-      <line x1="0" y1="-54" x2="0" y2="54"/>
-      <line x1="-54" y1="0" x2="54" y2="0"/>
-      <line x1="-38" y1="-38" x2="38" y2="38"/>
-      <line x1="38" y1="-38" x2="-38" y2="38"/>
-      <circle cx="0" cy="0" r="16" fill="#F59E0B" stroke="#3B1E0E" stroke-width="4.5"/>
-    </g>
+  <g data-mascot-icon="claude" transform="translate(${x}, ${y}) scale(${scale})">
+    <defs>
+      <linearGradient id="claudeSun_${uid}" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#FB923C"/>
+        <stop offset="55%" stop-color="#EA580C"/>
+        <stop offset="100%" stop-color="#D9532F"/>
+      </linearGradient>
+    </defs>
+    <!-- Bold dark-ink warm terracotta-orange 8-point starburst flower -->
+    <polygon points="100,22 117,59 155,45 141,83 178,100 141,117 155,155 117,141 100,178 83,141 45,155 59,117 22,100 59,83 45,45 83,59" fill="url(#claudeSun_${uid})" stroke="#3B1E0E" stroke-width="8" stroke-linejoin="round"/>
+    <!-- Warm cream inner ring + terracotta center -->
+    <circle cx="100" cy="100" r="27" fill="#FFF7ED"/>
+    <circle cx="100" cy="100" r="17" fill="#EA580C"/>
   </g>`;
   }
 
+  // big_fat_fish: bold-ink chibi comic whale sticker matching official cover top-left icon
+  const whaleBodyPath =
+    'M18 122 C14 82, 46 62, 84 64 C112 66, 126 86, 136 102 C142 110, 149 106, 150 96 C138 88, 134 72, 141 65 C149 58, 161 65, 166 77 C173 68, 184 69, 186 79 C188 90, 177 103, 164 110 C163 138, 146 161, 114 170 C78 179, 32 167, 20 138 C18 132, 17 127, 18 122 Z';
+
   return `
-  <g transform="translate(${x}, ${y}) scale(${scale})">
-    <path d="M92 22 C86 -6, 62 -10, 56 6" fill="none" stroke="#38BDF8" stroke-width="6" stroke-linecap="round"/>
-    <path d="M98 22 C106 -6, 130 -10, 136 6" fill="none" stroke="#7DD3FC" stroke-width="6" stroke-linecap="round"/>
-    <circle cx="18" cy="48" r="8" fill="none" stroke="#38BDF8" stroke-width="3.5" opacity="0.9"/>
-    <circle cx="34" cy="24" r="5" fill="#7DD3FC" opacity="0.85"/>
-    <path d="M188 92 C218 68, 240 58, 246 74 C250 86, 232 98, 224 102 C238 110, 248 124, 240 134 C230 146, 208 130, 184 114 Z" fill="#2563EB" stroke="#1E293B" stroke-width="4.5" stroke-linejoin="round"/>
-    <ellipse cx="114" cy="100" rx="88" ry="66" fill="#3B82F6" stroke="#1E293B" stroke-width="4.5"/>
-    <ellipse cx="102" cy="64" rx="54" ry="20" fill="#93C5FD" opacity="0.6"/>
-    <path d="M38 118 C64 156, 152 162, 186 122 C154 134, 80 136, 38 118 Z" fill="#E0F2FE"/>
-    <path d="M114 118 C128 142, 156 144, 156 126 C156 114, 134 108, 114 118 Z" fill="#1D4ED8" stroke="#1E293B" stroke-width="3.5"/>
-    <ellipse cx="58" cy="108" rx="10" ry="6" fill="#F472B6" opacity="0.55"/>
-    <circle cx="62" cy="90" r="8" fill="#0F172A"/>
-    <circle cx="59" cy="87" r="2.8" fill="#FFFFFF"/>
-    <path d="M36 106 Q48 118 62 110" fill="none" stroke="#0F172A" stroke-width="4.5" stroke-linecap="round"/>
+  <g data-mascot-icon="big_fat_fish" transform="translate(${x}, ${y}) scale(${scale})">
+    <defs>
+      <clipPath id="whaleClip_${uid}">
+        <path d="${whaleBodyPath}"/>
+      </clipPath>
+      <linearGradient id="whaleSpout_${uid}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#E0F2FE"/>
+        <stop offset="100%" stop-color="#BAE6FD"/>
+      </linearGradient>
+    </defs>
+    <!-- Two chunky teardrop water-spout droplets with thick dark-ink outlines -->
+    <path d="M90 63 C86 48, 72 43, 74 31 C76 20, 91 19, 95 31 C98 40, 94 52, 90 63 Z" fill="url(#whaleSpout_${uid})" stroke="#1E293B" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <path d="M96 58 C100 41, 111 22, 126 19 C139 17, 146 28, 139 39 C133 48, 117 48, 107 57 C103 60, 98 62, 96 58 Z" fill="url(#whaleSpout_${uid})" stroke="#1E293B" stroke-width="6.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <!-- Upward-curving J-shaped soft cornflower-blue whale body -->
+    <path d="${whaleBodyPath}" fill="#6498FC"/>
+    <!-- Creamy white rounded belly with curved pale blue-gray pleats clipped cleanly inside body -->
+    <g clip-path="url(#whaleClip_${uid})">
+      <path d="M12 124 C42 108, 72 120, 96 135 C118 147, 138 145, 162 128 L176 188 L8 188 Z" fill="#FFFDF9"/>
+      <g fill="none" stroke="#C7D4F5" stroke-width="5" stroke-linecap="round">
+        <path d="M33 116 C35 135, 45 153, 60 170"/>
+        <path d="M54 118 C59 140, 73 158, 94 173"/>
+        <path d="M77 126 C85 146, 102 160, 124 169"/>
+        <path d="M103 137 C113 150, 127 158, 144 161"/>
+      </g>
+      <!-- Dark-ink belly separation arc (softly paused under pink cheek, no mouth line) -->
+      <path d="M14 124 C40 110, 64 116, 82 128" fill="none" stroke="#1E293B" stroke-width="5.5" stroke-linecap="round"/>
+      <path d="M102 138 C120 146, 139 144, 158 130" fill="none" stroke="#1E293B" stroke-width="5.5" stroke-linecap="round"/>
+    </g>
+    <!-- Single solid dark dot eye + soft pink oval blush cheek (NO mouth line) -->
+    <ellipse cx="77" cy="109" rx="5.8" ry="6.8" fill="#1E293B"/>
+    <ellipse cx="94" cy="121" rx="10.8" ry="7.4" fill="#FDA4AF" opacity="0.92"/>
+    <!-- Crisp uniform thick dark-ink outer body outline on top -->
+    <path d="${whaleBodyPath}" fill="none" stroke="#1E293B" stroke-width="8" stroke-linejoin="round" stroke-linecap="round"/>
   </g>`;
 }
 
@@ -473,7 +518,7 @@ export function renderVerticalCardSvg(
   <rect x="84" y="92" width="460" height="56" rx="28" fill="url(#badgeV_${theme.id})"/>
   <text x="116" y="130" fill="${theme.badgeTextColor}" font-size="26" font-weight="800" font-family="${FONT_STACK}">${escapeXml(truncateByDisplayWidth(`${theme.badgeLabel} · ${formatted.meta.dateStr}`, 28))}</text>
 
-  ${renderMascotSvg(theme.id, 710, 88, 1.1, `v_${theme.id}`)}
+  ${renderMascotSvg(theme.id, 756, 78, 1.08, `v_${theme.id}`)}
 
   <text x="84" y="274" fill="#FFFFFF" font-size="64" font-weight="800" font-family="${FONT_STACK}">${project}</text>
   <text x="84" y="344" fill="${theme.subtitleColor}" font-size="30" font-family="${FONT_STACK}">${escapeXml(truncateByDisplayWidth(theme.subtitle, 40))}</text>
@@ -538,7 +583,7 @@ export function renderHorizontalCardSvg(context, formatted, { heroImageDataUri }
 
   <!-- Mascot badge medallion -->
   <circle cx="1370" cy="176" r="112" fill="rgba(255,255,255,0.06)" stroke="${theme.cardStroke}" stroke-width="2.5"/>
-  ${renderMascotSvg(theme.id, 1246, 72, 1.02, `h_${theme.id}`)}
+  ${renderMascotSvg(theme.id, 1270, 76, 1.0, `h_${theme.id}`)}
 
   <!-- Top sticker header pill -->
   <rect x="96" y="64" width="660" height="52" rx="26" fill="url(#pillH_${theme.id})"/>
@@ -828,9 +873,9 @@ export function renderCarouselSlidesSvg(
   <text x="142" y="${ctaY + 270}" fill="${comic.ink}" font-size="16" font-weight="700" font-family="${MONO_STACK}">dsh plugin add github:Kirakila7/dsh-plugin-devlog-poster</text>
 
   <!-- Right column: crisp white comic medallion hosting mini mascot emblem -->
-  <circle cx="852" cy="${ctaY + 178}" r="108" fill="${comic.shadow}"/>
-  <circle cx="846" cy="${ctaY + 172}" r="108" fill="#FFFFFF" stroke="${comic.ink}" stroke-width="4.5"/>
-  ${renderMascotSvg(theme.id, 742, ctaY + 86, 0.84, `p4_${theme.id}`)}`;
+  <circle cx="858" cy="${ctaY + 177}" r="92" fill="${comic.shadow}"/>
+  <circle cx="852" cy="${ctaY + 171}" r="92" fill="#FFFFFF" stroke="${comic.ink}" stroke-width="4.5"/>
+  ${renderMascotSvg(theme.id, 772, ctaY + 91, 0.8, `p4_${theme.id}`)}`;
 
   const slide4 = renderComicSlideShell({
     comic,

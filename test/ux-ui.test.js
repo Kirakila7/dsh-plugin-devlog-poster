@@ -157,7 +157,59 @@ test('preview.html workbench includes tabs, phone carousel, char badges, batch e
     const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
     assert.ok(scriptMatch, 'preview.html should contain inline script');
     assert.doesNotThrow(() => new Function(scriptMatch[1]), 'inline workbench script must be valid JS');
+
+    // Mascot base64 deduplication in preview.html while standalone SVGs stay self-contained
+    assert.ok(html.includes('window.__MASCOT_DATA_URIS__'));
+    assert.ok(html.includes('hydrateMascotImages('));
+    assert.ok(html.includes('data-mascot-id="big_fat_fish"'));
+    const b64Matches = html.match(/data:image\/png;base64,[A-Za-z0-9+/=]+/g) || [];
+    assert.equal(b64Matches.length, 4, 'each mascot PNG data URI should appear only once in preview.html');
+    assert.equal(new Set(b64Matches).size, 4);
+    assert.ok(Buffer.byteLength(html, 'utf8') < 12 * 1024 * 1024, 'deduplicated preview.html should be well under 12MB');
+
+    const standaloneVertical = readFileSync(bundle.files.cardVertical, 'utf8');
+    const standaloneSlide1 = readFileSync(bundle.files.slides[0], 'utf8');
+    assert.ok(standaloneVertical.includes('data:image/png;base64,'));
+    assert.ok(standaloneVertical.includes('Zipzipipe'));
+    assert.ok(standaloneSlide1.includes('data:image/png;base64,'));
+    assert.ok(standaloneSlide1.includes('Zipzipipe'));
   } finally {
     rmSync(tmpOut, { recursive: true, force: true });
   }
+});
+
+test('P4 comic medallion renders bold-ink sticker icons matching all 4 official covers', () => {
+  const ctx = makeContext();
+  const byStyle = {};
+  for (const styleId of AVAILABLE_STYLES) {
+    const formatted = formatMultiPlatformDevlog(ctx, { style: styleId });
+    const slides = renderCarouselSlidesSvg(ctx, formatted, { isMascotCover: true });
+    const p4 = slides[3].svg;
+    assert.ok(p4.includes('r="92"'), `${styleId} P4 medallion should use r=92`);
+    assert.ok(p4.includes(`data-mascot-icon="${styleId}"`), `${styleId} missing mascot icon marker`);
+    byStyle[styleId] = p4;
+  }
+
+  // big_fat_fish: J-shaped cornflower-blue whale, ribbed white belly, dot eye, pink blush, 2 water drops, NO mouth line
+  assert.ok(byStyle.big_fat_fish.includes('#6498FC'));
+  assert.ok(byStyle.big_fat_fish.includes('#FFFDF9'));
+  assert.ok(byStyle.big_fat_fish.includes('#C7D4F5'));
+  assert.ok(byStyle.big_fat_fish.includes('#FDA4AF'));
+  assert.ok(byStyle.big_fat_fish.includes('#BAE6FD'));
+  assert.ok(byStyle.big_fat_fish.includes('whaleClip_p4_big_fat_fish'));
+  assert.equal(byStyle.big_fat_fish.includes('Q48 118'), false, 'whale icon must have no mouth line');
+
+  // gemini: 4-point sparkle with lavender outer + golden core
+  assert.ok(byStyle.gemini.includes('#A78BFA'));
+  assert.ok(byStyle.gemini.includes('#FCD34D'));
+
+  // chatgpt: mint smiling blob with pink smile + 3 comic burst ticks
+  assert.ok(byStyle.chatgpt.includes('#A7F3D0'));
+  assert.ok(byStyle.chatgpt.includes('#FB7185'));
+  assert.equal((byStyle.chatgpt.match(/<line x1="(65|36|22)"/g) || []).length, 3);
+
+  // claude: 8-point terracotta starburst flower + warm cream inner ring
+  assert.ok(byStyle.claude.includes('<polygon points="100,22'));
+  assert.ok(byStyle.claude.includes('#EA580C'));
+  assert.ok(byStyle.claude.includes('#FFF7ED'));
 });
