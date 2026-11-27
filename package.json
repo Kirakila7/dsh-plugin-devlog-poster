@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-devlog-poster",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "DSH (DeepSeek Harness) Build-in-Public devlog & daily/weekly work report plugin for GitHub, Xiaohongshu, Bilibili, Douyin, Feishu, DingTalk, WeCom, Slack, Discord, and QQ.",
   "type": "module",
   "main": "src/index.js",
@@ -23,6 +23,8 @@
     "src",
     "assets",
     "skills",
+    "plugin.json",
+    ".codex-plugin",
     "cordis.patch.yml",
     "screenshots.json",
     "README.md"
@@ -35,6 +37,9 @@
     "dsh-plugin",
     "deepseek-harness",
     "cordis",
+    "antigravity-plugin",
+    "codex-plugin",
+    "agent-skill",
     "devlog",
     "build-in-public",
     "xiaohongshu",

@@ -46,16 +46,27 @@ node src/cli.js doctor
 
 ---
 
-## 🤖 Antigravity / Codex / Claude Code Skill（零额外 API 费用）
+## 📦 4 大生态一键安装（DSH / Agent Skills / Antigravity / OpenAI Codex）
 
-仓库内置通用 Agent Skill：[skills/devlog-poster/SKILL.md](./skills/devlog-poster/SKILL.md)。在 **Antigravity / Codex / Claude Code** 中安装后，直接对 Agent 说「帮我写今天的开发日志 / 发小红书 / 写工作日报」，Agent 会**直接使用自身推理能力（零额外 LLM API 费用）**读取当前仓库 `git log`、`git diff --stat` 与对话上下文，提炼出像真人写的亮点、踩坑与下一步，再调用 CLI 一键生成 4 平台文案与 4 图轮播卡片并打开预览页。
+同一份仓库开箱即用适配 4 大生态——在 Agent 会话内默认直接用 Agent 自身推理提炼日志（**零额外 LLM API 费用**），在终端里也支持零安装 `npx` 直跑：
 
-```bash
-# 链接到当前项目或全局 Agent Skills 目录（Antigravity / Codex / Claude Code 通用）
-mkdir -p ~/.agents/skills && ln -s "$(pwd)/skills/devlog-poster" ~/.agents/skills/devlog-poster
-# Claude Code 用户也可同步链接到 ~/.claude/skills/devlog-poster
-mkdir -p ~/.claude/skills && ln -s "$(pwd)/skills/devlog-poster" ~/.claude/skills/devlog-poster
-```
+| 生态 | 打包入口 | 安装 / 接入方式 |
+| --- | --- | --- |
+| **DSH (DeepSeek Harness)** | `package.json` (`dsh.bundle`) + `cordis.patch.yml` | `dsh plugin --profile web add github:Kirakila7/dsh-plugin-devlog-poster` |
+| **通用 Agent Skills** (Claude Code / Cursor / Windsurf 等) | `skills/devlog-poster/SKILL.md` | `npx skills add Kirakila7/dsh-plugin-devlog-poster` |
+| **Google Antigravity** | 根目录 `plugin.json` + `skills/devlog-poster/` | `agy plugin install https://github.com/Kirakila7/dsh-plugin-devlog-poster` |
+| **OpenAI Codex** | `.codex-plugin/plugin.json` + `skills/devlog-poster/` | 克隆或挂载仓库为 Codex 插件目录，自动加载 `.codex-plugin/plugin.json` 与 `skills/devlog-poster` |
+
+> **手动本地软链 / 零安装 CLI 兜底**：
+> ```bash
+> # 可选：在任意仓库零安装直跑 CLI
+> npx -y github:Kirakila7/dsh-plugin-devlog-poster generate --open
+>
+> # 可选：本地开发时将 Skill 软链到全局 Agent 目录
+> mkdir -p ~/.agents/skills && ln -s "$(pwd)/skills/devlog-poster" ~/.agents/skills/devlog-poster
+> ```
+
+安装完成后，直接对 Agent 说「帮我写今天的开发日志 / 发小红书 / 写工作日报」，Agent 会自动读取当前仓库 `git log`、`git diff --stat` 与对话上下文，提炼出像真人写的亮点、踩坑与下一步，再调用 CLI 一键生成 4 平台文案与 4 图轮播卡片并打开预览页。
 
 ---
 

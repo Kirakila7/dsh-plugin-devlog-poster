@@ -48,13 +48,15 @@ Choose the persona style requested by the user (or default to `big_fat_fish`).
 
 ### Step 3: Invoke the CLI to Generate the Bundle & Open Preview
 
-First check whether `devlog-poster` is globally linked; otherwise fall back to the local CLI script:
+Resolve the CLI in portable order — globally linked/installed `devlog-poster`, then local repo `node ./src/cli.js`, then zero-install `npx -y github:Kirakila7/dsh-plugin-devlog-poster`:
 
 ```bash
 if command -v devlog-poster >/dev/null 2>&1; then
   DEVLOG_CMD=(devlog-poster)
+elif [ -f ./src/cli.js ] && [ -f ./skills/devlog-poster/SKILL.md ]; then
+  DEVLOG_CMD=(node ./src/cli.js)
 else
-  DEVLOG_CMD=(node /Users/zhaoxiangyu/ackira/运营社媒/forkira/src/cli.js)
+  DEVLOG_CMD=(npx -y github:Kirakila7/dsh-plugin-devlog-poster)
 fi
 ```
 

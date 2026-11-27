@@ -82,7 +82,10 @@ test('SKILL.md has valid YAML frontmatter, zero-cost agent workflow, 4 styles, a
   assert.ok(content.includes('git log'));
   assert.ok(content.includes('git diff --stat'));
   assert.ok(content.includes('devlog-poster'));
-  assert.ok(content.includes('/Users/zhaoxiangyu/ackira/运营社媒/forkira/src/cli.js'));
+  assert.ok(content.includes('node ./src/cli.js'));
+  assert.ok(content.includes('npx -y github:Kirakila7/dsh-plugin-devlog-poster'));
+  assert.ok(!/\/Users\//.test(content), 'SKILL.md must not leak personal /Users/ paths');
+  assert.ok(!/[A-Za-z]:\\Users\\/.test(content), 'SKILL.md must not leak personal Windows user paths');
   assert.ok(content.includes('--open'));
   assert.ok(content.includes('publish-github'));
   assert.ok(content.includes('save-draft'));

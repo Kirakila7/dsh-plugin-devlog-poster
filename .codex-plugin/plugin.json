@@ -1,0 +1,21 @@
+{
+  "name": "devlog-poster",
+  "version": "0.8.0",
+  "description": "Build-in-Public devlog, 4-slide Xiaohongshu/Douyin/Bilibili/GitHub carousel packs with 4 AI-girl styles, and multi-repo daily/weekly team work reports at zero extra LLM API cost.",
+  "skills": [
+    "skills/devlog-poster"
+  ],
+  "repository": "https://github.com/Kirakila7/dsh-plugin-devlog-poster",
+  "license": "MIT",
+  "keywords": [
+    "codex-plugin",
+    "agent-skill",
+    "devlog",
+    "build-in-public",
+    "work-report",
+    "xiaohongshu",
+    "bilibili",
+    "douyin",
+    "github"
+  ]
+}

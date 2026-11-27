@@ -1,0 +1,18 @@
+{
+  "name": "devlog-poster",
+  "displayName": "Devlog Poster",
+  "version": "0.8.0",
+  "description": "Build-in-Public devlog, 4-slide Xiaohongshu/Douyin/Bilibili/GitHub carousel packs with 4 AI-girl styles, and multi-repo daily/weekly team work reports at zero extra LLM API cost.",
+  "author": {
+    "name": "Kirakila7",
+    "url": "https://github.com/Kirakila7"
+  },
+  "homepage": "https://github.com/Kirakila7/dsh-plugin-devlog-poster",
+  "repository": "https://github.com/Kirakila7/dsh-plugin-devlog-poster",
+  "license": "MIT",
+  "suggestedPrompts": [
+    "Write today's Build-in-Public devlog & 4-slide carousel / 帮我写今天的开发日志和四平台 4 图轮播",
+    "Generate AI-girl devlog cards (big_fat_fish / gemini / chatgpt / claude) / 用哈基米风格生成小红书和抖音开发日志套图",
+    "Aggregate active repos into a daily team work report / 汇总多个仓库的今日提交生成飞书工作日报"
+  ]
+}
