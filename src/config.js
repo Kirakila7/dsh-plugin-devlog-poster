@@ -24,15 +24,24 @@ export const DEFAULT_CONFIG = {
   qqUserId: '',
   watchDirs: '',
   watchRepos: '',
+  blueskyHandle: '',
 };
 
-export const SECRET_CONFIG_KEYS = ['reportToken', 'imageApiKey', 'aiApiKey'];
+export const SECRET_CONFIG_KEYS = [
+  'reportToken',
+  'imageApiKey',
+  'aiApiKey',
+  'devtoApiKey',
+  'blueskyAppPassword',
+];
 
 export const CONFIG_KEYS = [
   ...Object.keys(DEFAULT_CONFIG),
   'reportToken',
   'imageApiKey',
   'aiApiKey',
+  'devtoApiKey',
+  'blueskyAppPassword',
   'browserProfileDir',
   'ghBin',
 ];

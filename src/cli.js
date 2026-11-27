@@ -11,6 +11,10 @@ import {
 } from './git-context.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
+import {
+  publishGlobalPlatform,
+  SUPPORTED_GLOBAL_PLATFORMS,
+} from './global-publisher.js';
 import { DRAFT_PLATFORMS, savePlatformDraft } from './draft-automation.js';
 import {
   formatWorkReport,
@@ -70,6 +74,8 @@ const VALUE_FLAGS = new Map([
   ['--ai-endpoint', 'aiEndpoint'],
   ['--ai-api-key', 'aiApiKey'],
   ['--max-depth', 'maxDepth'],
+  ['--handle', 'handle'],
+  ['--app-password', 'appPassword'],
 ]);
 
 const ARRAY_FLAGS = new Map([
@@ -83,6 +89,7 @@ const ARRAY_FLAGS = new Map([
 const BOOLEAN_FLAGS = new Map([
   ['--ai', 'ai'],
   ['--all-watched', 'allWatched'],
+  ['--published', 'published'],
   ['--execute', 'execute'],
   ['--open', 'open'],
   ['--local', 'local'],
@@ -289,9 +296,10 @@ Usage:
   devlog-poster [generate] [options]
   devlog-poster doctor [--repo <path>] [--json]
   devlog-poster publish-github [--mode devlog_file|release] [--tag <tag>] [--gh-repo <owner/repo>] [--execute]
+  devlog-poster publish-global --platform devto|bluesky|x|reddit|linkedin [--bundle <dir>] [--published] [--execute]
   devlog-poster save-draft [--platform xiaohongshu|bilibili|douyin] [--bundle <dir>] [--profile-dir <dir>] [--execute]
   devlog-poster send-report [--channel feishu|dingtalk|wecom|slack|discord|qq_onebot] [--period daily|weekly] [--scan-dir <path>] [--repos <paths>] [--all-watched] [--max-depth <n>] [--ai] [--endpoint <url>] [--token <tok>] [--group-id <id>] [--user-id <id>] [--execute]
-  devlog-poster generate-image [--platform xiaohongshu|bilibili|douyin|github] [--provider openai|gemini|volcengine|custom_openai|svg_fallback] [--style <id>] [--model <name>] [--endpoint <url>] [--api-key <key>] [--output <file>] [--execute]
+  devlog-poster generate-image [--platform xiaohongshu|bilibili|douyin|github|x|reddit|linkedin|devto] [--provider openai|gemini|volcengine|custom_openai|svg_fallback] [--style <id>] [--model <name>] [--endpoint <url>] [--api-key <key>] [--output <file>] [--execute]
   devlog-poster config show [--repo <path>] [--json]
   devlog-poster config set <key> <value> [--local] [--repo <path>]
   devlog-poster config reset [--local] [--repo <path>]
@@ -319,12 +327,15 @@ Common Generate Options:
   --hero-image <path>          Optional PNG/JPG hero illustration overlay
   --out <dir>                  Output directory (default: config.outputDir or "out")
   --json                       Emit machine-readable JSON output (generate / doctor / config show)
+  --published                  Publish Dev.to article live instead of draft (publish-global --platform devto)
   --execute                    Actually publish / send / save draft / call API (default is safe dry-run)
 
 Quick Examples:
   node src/cli.js generate --open
   node src/cli.js generate --ai --open
   node src/cli.js generate --scan-dir ~/workspace --since "24 hours ago" --open
+  node src/cli.js publish-global --platform devto
+  node src/cli.js publish-global --platform x
   node src/cli.js send-report --all-watched --period daily
   node src/cli.js doctor
   node src/cli.js config set defaultStyle gemini --local
@@ -525,6 +536,29 @@ async function runDoctor(opts, savedCfg) {
     hint: pwStatus === 'ok' ? '' : 'npm install playwright && npx playwright install chromium',
   });
 
+  // 9. Global overseas platform credentials (optional)
+  const hasDevtoKey = Boolean(savedCfg.devtoApiKey || process.env.DEVTO_API_KEY);
+  const hasBlueskyCreds = Boolean(
+    (savedCfg.blueskyHandle || process.env.BLUESKY_HANDLE) &&
+      (savedCfg.blueskyAppPassword || process.env.BLUESKY_APP_PASSWORD)
+  );
+  const readyGlobal = [];
+  if (hasDevtoKey) readyGlobal.push('devto');
+  if (hasBlueskyCreds) readyGlobal.push('bluesky');
+  checks.push({
+    id: 'global_platforms',
+    label: 'Global platforms (publish-global)',
+    status: readyGlobal.length > 0 ? 'ok' : 'warn',
+    detail:
+      readyGlobal.length > 0
+        ? `API ready: ${readyGlobal.join(', ')} · zero-key intents ready: x, reddit, linkedin, bluesky`
+        : 'zero-key intents ready (x, reddit, linkedin, bluesky); Dev.to / Bluesky API keys optional',
+    hint:
+      readyGlobal.length === 2
+        ? ''
+        : 'Optional: export DEVTO_API_KEY=<key> or BLUESKY_HANDLE / BLUESKY_APP_PASSWORD (or config set)',
+  });
+
   const hasError = checks.some((c) => c.status === 'error');
   const summary = {
     ok: !hasError,
@@ -652,6 +686,12 @@ function inferErrorHint(err, command) {
           ? 'ARK_API_KEY'
           : 'OPENAI_API_KEY';
     return `Set ${envVar}=<key>, pass --api-key <key>, or run with --provider svg_fallback`;
+  }
+  if (msg.includes('DEVTO_API_KEY')) {
+    return 'Set DEVTO_API_KEY=<key>, pass --api-key <key>, or run: node src/cli.js config set devtoApiKey <key>';
+  }
+  if (msg.includes('BLUESKY_HANDLE') || msg.includes('BLUESKY_APP_PASSWORD')) {
+    return 'Set BLUESKY_HANDLE & BLUESKY_APP_PASSWORD, pass --handle / --app-password, or run dry-run to open intentUrl';
   }
   if (msg.includes('Bundle manifest not found')) {
     return 'Generate a bundle first: node src/cli.js generate';
@@ -961,6 +1001,40 @@ export async function main(argv = process.argv.slice(2)) {
     return;
   }
 
+  if (command === 'publish-global') {
+    const platform = String(opts.platform || '').trim().toLowerCase();
+    if (!platform || !SUPPORTED_GLOBAL_PLATFORMS.includes(platform)) {
+      throw new CliError(
+        platform
+          ? `Unsupported global platform "${opts.platform}". Valid: ${SUPPORTED_GLOBAL_PLATFORMS.join(', ')}`
+          : `Missing --platform for publish-global. Valid: ${SUPPORTED_GLOBAL_PLATFORMS.join(', ')}`,
+        'node src/cli.js publish-global --platform devto'
+      );
+    }
+    const outputDir = opts.outputDir || savedCfg.outputDir || 'out';
+    const bundleDir = opts.bundleDir || findLatestBundle(outputDir);
+    if (!bundleDir) {
+      throw new CliError(
+        `No generated bundle found in "${resolve(outputDir)}" and --bundle was not provided.`,
+        'node src/cli.js generate'
+      );
+    }
+    if (!opts.bundleDir && !opts.json) {
+      console.error(`ℹ️  Auto-selected latest bundle: ${bundleDir}`);
+    }
+    const result = await publishGlobalPlatform({
+      platform,
+      bundleDir,
+      apiKey: opts.apiKey || savedCfg.devtoApiKey || undefined,
+      handle: opts.handle || savedCfg.blueskyHandle || undefined,
+      appPassword: opts.appPassword || savedCfg.blueskyAppPassword || undefined,
+      published: Boolean(opts.published),
+      dryRun: opts.dryRun !== false,
+    });
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
   if (command === 'generate' || command === 'publish-github') {
     const style = resolveCliStyle(opts.style, savedCfg.defaultStyle);
     const since = opts.since || '24 hours ago';
@@ -1055,6 +1129,7 @@ export async function main(argv = process.argv.slice(2)) {
       console.log(`   - 小红书     : ${files.xiaohongshu}`);
       console.log(`   - B站        : ${files.bilibili}`);
       console.log(`   - 抖音       : ${files.douyin}`);
+      console.log(`   - Global     : x.md · reddit.md · linkedin.md · bluesky.md · devto.md`);
       console.log(`   - Work Daily : ${files.workDailyPlain}`);
       console.log(`   - 3:4 Card   : ${files.cardVertical}`);
       console.log(`   - 16:9 Card  : ${files.cardHorizontal}`);
@@ -1067,8 +1142,9 @@ export async function main(argv = process.argv.slice(2)) {
         console.log(`   1. Open preview UI : ${getOpenPreviewCommand(files.preview)}`);
       }
       console.log('   2. Preview GitHub  : node src/cli.js publish-github --mode devlog_file');
-      console.log('   3. Save XHS draft  : node src/cli.js save-draft --platform xiaohongshu');
-      console.log('   4. Send daily note : node src/cli.js send-report --period daily');
+      console.log('   3. Publish Global  : node src/cli.js publish-global --platform x (or devto / bluesky / reddit / linkedin)');
+      console.log('   4. Save XHS draft  : node src/cli.js save-draft --platform xiaohongshu');
+      console.log('   5. Send daily note : node src/cli.js send-report --period daily');
       return;
     }
 

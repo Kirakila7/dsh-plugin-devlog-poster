@@ -5,6 +5,10 @@ import {
 } from './git-context.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
+import {
+  publishGlobalPlatform,
+  SUPPORTED_GLOBAL_PLATFORMS,
+} from './global-publisher.js';
 import { savePlatformDraft } from './draft-automation.js';
 import { formatWorkReport, sendWorkReport } from './work-report.js';
 import {
@@ -835,6 +839,8 @@ export {
   formatMultiPlatformDevlog,
   writeDevlogBundle,
   publishToGitHub,
+  publishGlobalPlatform,
+  SUPPORTED_GLOBAL_PLATFORMS,
   savePlatformDraft,
   formatWorkReport,
   sendWorkReport,

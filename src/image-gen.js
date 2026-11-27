@@ -35,6 +35,38 @@ export const PLATFORM_IMAGE_PRESETS = {
     composition:
       'Minimalist 16:9 open-source social preview banner, sleek architectural geometry, balanced negative space, crisp developer-tool branding aesthetic',
   },
+  x: {
+    platform: 'x',
+    label: 'X (Twitter) 推文配图',
+    aspectRatio: '16:9',
+    size: '1344x768',
+    composition:
+      'Wide 16:9 punchy social preview illustration for X / Twitter timeline, crisp central focal subject, strong silhouette contrast at feed thumbnail size, generous clean margin for Build-in-Public tech storytelling',
+  },
+  reddit: {
+    platform: 'reddit',
+    label: 'Reddit 帖子封面',
+    aspectRatio: '16:9',
+    size: '1344x768',
+    composition:
+      'Wide 16:9 authentic indie-maker showcase visual for Reddit r/SideProject, cozy developer desk and code-craft energy, grounded editorial composition without clickbait clutter',
+  },
+  linkedin: {
+    platform: 'linkedin',
+    label: 'LinkedIn 分享横图',
+    aspectRatio: '16:9',
+    size: '1344x768',
+    composition:
+      'Wide 16:9 refined engineering editorial illustration for LinkedIn feed, structured visual balance, clean geometric depth, approachable modern developer-brand polish',
+  },
+  devto: {
+    platform: 'devto',
+    label: 'Dev.to 文章头图',
+    aspectRatio: '16:9',
+    size: '1344x768',
+    composition:
+      'Wide 16:9 developer blog header illustration for Dev.to (center-band safe for 1000x420 banner crop), expressive open-source devlog visual storytelling with balanced side margins',
+  },
 };
 
 const SHARED_CHIBI_ART_STYLE =

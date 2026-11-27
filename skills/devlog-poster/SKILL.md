@@ -96,7 +96,9 @@ For multi-project daily/weekly summaries, configure watched folders once or pass
 "${DEVLOG_CMD[@]}" send-report --scan-dir ~/workspace --period daily
 ```
 
-After generating, report the bundle path, `preview.html` path, and a concise summary of the generated platforms (GitHub, Xiaohongshu, Bilibili, Douyin, Daily Work Report, and P1–P4 carousel slides).
+After generating, report the bundle path, `preview.html` path, and a concise summary of the generated platforms:
+- **Domestic & GitHub**: GitHub, Xiaohongshu, Bilibili, Douyin, Daily Work Report, and P1–P4 carousel slides.
+- **Global Overseas Platforms (`🌍 海外平台` tab)**: **X (Twitter)** (<=280 single post + 3–4 tweet thread + intent URL), **Bluesky** (<=300 post + intent URL), **Reddit** (authentic show-off Markdown + subreddit suggestions + submit URL), **LinkedIn** (engineering reflection post), and **Dev.to** (complete Markdown with YAML frontmatter).
 
 ### Step 4: Optional Follow-Up Actions (Respect `dryRun` Safety!)
 
@@ -112,7 +114,25 @@ All publishing, draft-filling, and webhook-sending commands **default to safe dr
    "${DEVLOG_CMD[@]}" publish-github --mode devlog_file --execute
    ```
 
-2. **Fill Social Platform Draft Box (Xiaohongshu / Bilibili / Douyin)**:
+2. **Publish to Overseas Global Platforms (`X` / `Reddit` / `LinkedIn` / `Bluesky` / `Dev.to`)**:
+   - Auto-discovers the latest bundle in `out/` when `--bundle` is omitted.
+   - `x`, `reddit`, `linkedin` work with **zero API keys** via prefilled web intent URLs (`intentUrl` / `submitUrl`) + ready-to-post copy.
+   - `devto` calls the official Dev.to API (`DEVTO_API_KEY` / `config set devtoApiKey`, defaults to `published: false` draft unless `--published` is passed).
+   - `bluesky` supports zero-key `intentUrl` or ATProto API (`BLUESKY_HANDLE` + `BLUESKY_APP_PASSWORD`).
+   ```bash
+   # Preview first (safe dry-run, masked credentials)
+   "${DEVLOG_CMD[@]}" publish-global --platform x
+   "${DEVLOG_CMD[@]}" publish-global --platform reddit
+   "${DEVLOG_CMD[@]}" publish-global --platform linkedin
+   "${DEVLOG_CMD[@]}" publish-global --platform bluesky
+   "${DEVLOG_CMD[@]}" publish-global --platform devto
+
+   # Execute ONLY after user confirms (e.g. create Dev.to draft or post to Bluesky via ATProto)
+   "${DEVLOG_CMD[@]}" publish-global --platform devto --execute
+   "${DEVLOG_CMD[@]}" publish-global --platform bluesky --execute
+   ```
+
+3. **Fill Social Platform Draft Box (Xiaohongshu / Bilibili / Douyin)**:
    - Safety guarantee: opens an isolated Playwright browser, fills title/body/card image, and attempts to save as draft — **never auto-clicks Publish**.
    ```bash
    # Preview draft plan first (auto-selects latest bundle in out/)
@@ -122,7 +142,7 @@ All publishing, draft-filling, and webhook-sending commands **default to safe dr
    "${DEVLOG_CMD[@]}" save-draft --platform xiaohongshu --execute
    ```
 
-3. **Send Daily / Weekly Work Report (Feishu / DingTalk / WeCom / Slack / Discord / QQ OneBot v11)**:
+4. **Send Daily / Weekly Work Report (Feishu / DingTalk / WeCom / Slack / Discord / QQ OneBot v11)**:
    ```bash
    # Preview payload first (safe dry-run)
    "${DEVLOG_CMD[@]}" send-report --channel feishu --period daily \
@@ -132,7 +152,7 @@ All publishing, draft-filling, and webhook-sending commands **default to safe dr
    "${DEVLOG_CMD[@]}" send-report --channel feishu --period daily --execute
    ```
 
-4. **Environment Diagnostics**:
+5. **Environment Diagnostics**:
    ```bash
    "${DEVLOG_CMD[@]}" doctor
    ```

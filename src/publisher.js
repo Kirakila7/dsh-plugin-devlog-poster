@@ -130,6 +130,29 @@ function buildStyleVariants(context, defaultFormatted, { heroImageDataUri } = {}
         github: {
           text: formatted.platforms.github.content,
         },
+        x: {
+          text: formatted.platforms.x.content,
+          extra: formatted.platforms.x.thread,
+          intentUrl: formatted.platforms.x.intentUrl,
+        },
+        bluesky: {
+          text: formatted.platforms.bluesky.content,
+          intentUrl: formatted.platforms.bluesky.intentUrl,
+        },
+        reddit: {
+          title: formatted.platforms.reddit.title,
+          text: formatted.platforms.reddit.content,
+          submitUrl: formatted.platforms.reddit.submitUrl,
+          suggestedSubreddits: formatted.platforms.reddit.suggestedSubreddits,
+        },
+        linkedin: {
+          title: formatted.platforms.linkedin.title,
+          text: formatted.platforms.linkedin.content,
+        },
+        devto: {
+          title: formatted.platforms.devto.title,
+          text: formatted.platforms.devto.content,
+        },
       },
       verticalSvg: renderVerticalCardSvg(context, formatted, {
         heroImageDataUri: effectiveHero,
@@ -266,6 +289,98 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
     </article>`
     )
     .join('\n');
+
+  const globalCardsHtml = `
+    <article class="panel copy-panel" data-platform="x">
+      <div class="panel-head">
+        <div class="panel-title-group">
+          <h2>𝕏 X (Twitter) · Build in Public</h2>
+          <div class="char-badges" id="x-badges" aria-live="polite"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-primary" onclick="copyText('x-text', this, 'X 推文')">一键复制推文</button>
+          <a class="btn-ghost" id="x-intent-link" href="${escapeHtml(initial.platforms.x.intentUrl)}" target="_blank" rel="noreferrer">发到 X ↗</a>
+        </div>
+      </div>
+      <textarea id="x-text" rows="5" oninput="handleCopyInput('x')">${escapeHtml(initial.platforms.x.text)}</textarea>
+      <div class="sub-head">
+        <div class="sub-title-group">
+          <span>🧵 串推 Thread（3–4 条）</span>
+          <span class="char-pill neutral" id="x-extra-badge"></span>
+        </div>
+        <button type="button" class="btn-secondary" onclick="copyText('x-extra', this, 'X Thread')">复制 Thread</button>
+      </div>
+      <textarea id="x-extra" rows="7" oninput="updateCharCounts()">${escapeHtml(initial.platforms.x.extra)}</textarea>
+    </article>
+
+    <article class="panel copy-panel" data-platform="bluesky">
+      <div class="panel-head">
+        <div class="panel-title-group">
+          <h2>🦋 Bluesky · ATProto 短帖</h2>
+          <div class="char-badges" id="bluesky-badges" aria-live="polite"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-primary" onclick="copyText('bluesky-text', this, 'Bluesky 正文')">一键复制正文</button>
+          <a class="btn-ghost" id="bluesky-intent-link" href="${escapeHtml(initial.platforms.bluesky.intentUrl)}" target="_blank" rel="noreferrer">发到 Bluesky ↗</a>
+        </div>
+      </div>
+      <textarea id="bluesky-text" rows="6" oninput="handleCopyInput('bluesky')">${escapeHtml(initial.platforms.bluesky.text)}</textarea>
+    </article>
+
+    <article class="panel copy-panel" data-platform="reddit">
+      <div class="panel-head">
+        <div class="panel-title-group">
+          <h2>🤖 Reddit · Showoff 社区帖</h2>
+          <div class="char-badges" id="reddit-badges" aria-live="polite"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-primary" onclick="copyText('reddit-text', this, 'Reddit 正文')">一键复制正文</button>
+          <a class="btn-ghost" id="reddit-intent-link" href="${escapeHtml(initial.platforms.reddit.submitUrl)}" target="_blank" rel="noreferrer">发到 Reddit ↗</a>
+        </div>
+      </div>
+      <div class="sub-pills" aria-label="推荐版块">
+        ${(initial.platforms.reddit.suggestedSubreddits || ['r/SideProject', 'r/indiehackers', 'r/programming'])
+          .map((sub) => `<span class="sub-pill">${escapeHtml(sub)}</span>`)
+          .join('')}
+      </div>
+      <div class="sub-head" style="margin-top:8px;">
+        <span>帖子标题（Title）</span>
+        <button type="button" class="btn-secondary" onclick="copyText('reddit-title', this, 'Reddit 标题')">复制标题</button>
+      </div>
+      <input id="reddit-title" class="title-input" type="text" value="${escapeHtml(initial.platforms.reddit.title)}" oninput="handleCopyInput('reddit')" />
+      <div class="sub-head" style="margin-top:10px;">
+        <span>Markdown 正文</span>
+      </div>
+      <textarea id="reddit-text" rows="9" oninput="handleCopyInput('reddit')">${escapeHtml(initial.platforms.reddit.text)}</textarea>
+    </article>
+
+    <article class="panel copy-panel" data-platform="linkedin">
+      <div class="panel-head">
+        <div class="panel-title-group">
+          <h2>💼 LinkedIn · 工程复盘帖</h2>
+          <div class="char-badges" id="linkedin-badges" aria-live="polite"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-primary" onclick="copyText('linkedin-text', this, 'LinkedIn 正文')">一键复制正文</button>
+          <a class="btn-ghost" href="https://www.linkedin.com/feed/?shareActive=true" target="_blank" rel="noreferrer">打开 LinkedIn ↗</a>
+        </div>
+      </div>
+      <textarea id="linkedin-text" rows="10" oninput="handleCopyInput('linkedin')">${escapeHtml(initial.platforms.linkedin.text)}</textarea>
+    </article>
+
+    <article class="panel copy-panel" data-platform="devto">
+      <div class="panel-head">
+        <div class="panel-title-group">
+          <h2>📝 Dev.to · Markdown 技术文（含 Frontmatter）</h2>
+          <div class="char-badges" id="devto-badges" aria-live="polite"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn-primary" onclick="copyText('devto-text', this, 'Dev.to Markdown')">一键复制 Markdown</button>
+          <a class="btn-ghost" href="https://dev.to/new" target="_blank" rel="noreferrer">打开 Dev.to ↗</a>
+        </div>
+      </div>
+      <textarea id="devto-text" rows="12" oninput="handleCopyInput('devto')">${escapeHtml(initial.platforms.devto.text)}</textarea>
+    </article>`;
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -613,10 +728,42 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       transition: border-color 0.15s ease, background 0.15s ease;
     }
 
-    textarea:focus {
+    textarea:focus, .title-input:focus {
       outline: none;
       border-color: var(--accent);
       background: #FFFFFF;
+    }
+
+    .title-input {
+      width: 100%;
+      background: #F8FAFC;
+      color: #0F172A;
+      border: 2px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13.5px;
+      font-weight: 700;
+      font-family: inherit;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .sub-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .sub-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--surface-soft);
+      color: var(--ink);
+      border: 1.5px solid var(--border-subtle);
     }
 
     .actions {
@@ -1030,6 +1177,7 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       <nav class="tabs" role="tablist" aria-label="创作工作台分页">
         <button type="button" role="tab" class="tab-btn active" data-tab="visuals" aria-selected="true" onclick="switchTab('visuals')">🖼️ 轮播与封面</button>
         <button type="button" role="tab" class="tab-btn" data-tab="copy" aria-selected="false" onclick="switchTab('copy')">✍️ 四平台文案</button>
+        <button type="button" role="tab" class="tab-btn" data-tab="global" aria-selected="false" onclick="switchTab('global')">🌍 海外平台</button>
         <button type="button" role="tab" class="tab-btn" data-tab="report" aria-selected="false" onclick="switchTab('report')">📋 工作日报</button>
         <button type="button" role="tab" class="tab-btn" data-tab="prompts" aria-selected="false" onclick="switchTab('prompts')">🎨 生图提示词</button>
         <button type="button" role="tab" class="tab-btn" data-tab="all" aria-selected="false" onclick="switchTab('all')">📑 全部展开</button>
@@ -1156,6 +1304,19 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       </div>
       <div class="grid">
         ${cardsHtml}
+      </div>
+    </section>
+
+    <!-- Tab 2b: Global Overseas Platforms -->
+    <section class="tab-section tab-hidden" data-section="global">
+      <div class="section-banner">
+        <div>
+          <h2>🌍 海外开发者平台（X / Bluesky / Reddit / LinkedIn / Dev.to）</h2>
+          <div class="section-sub">Build in Public 英文原生文案 + 字符上限检测 + 预填直发链接（随 AI 娘风格实时联动）</div>
+        </div>
+      </div>
+      <div class="grid">
+        ${globalCardsHtml}
       </div>
     </section>
 
@@ -1348,10 +1509,61 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
         ghBadges.innerHTML = pillHtml(len + ' 字 · ' + lines + ' 行', 'neutral');
       }
 
+      // X (Twitter): <= 280 chars
+      const xEl = document.getElementById('x-text');
+      const xBadges = document.getElementById('x-badges');
+      if (xEl && xBadges) {
+        const len = [...(xEl.value || '')].length;
+        const cls = len > 280 ? 'over' : len > 250 ? 'warn' : 'ok';
+        xBadges.innerHTML = pillHtml(len + '/280 chars', cls);
+      }
+
+      // Bluesky: <= 300 chars
+      const bskyEl = document.getElementById('bluesky-text');
+      const bskyBadges = document.getElementById('bluesky-badges');
+      if (bskyEl && bskyBadges) {
+        const len = [...(bskyEl.value || '')].length;
+        const cls = len > 300 ? 'over' : len > 270 ? 'warn' : 'ok';
+        bskyBadges.innerHTML = pillHtml(len + '/300 chars', cls);
+      }
+
+      // Reddit: title <= 300 chars + body length
+      const rdTitleEl = document.getElementById('reddit-title');
+      const rdEl = document.getElementById('reddit-text');
+      const rdBadges = document.getElementById('reddit-badges');
+      if (rdEl && rdBadges) {
+        const titleLen = [...((rdTitleEl && rdTitleEl.value) || '')].length;
+        const bodyLen = [...(rdEl.value || '')].length;
+        const titleCls = titleLen > 300 ? 'over' : titleLen > 240 ? 'warn' : 'ok';
+        rdBadges.innerHTML =
+          pillHtml('Title ' + titleLen + '/300', titleCls) +
+          pillHtml(bodyLen + ' chars', 'neutral');
+      }
+
+      // LinkedIn: <= 3000 chars
+      const liEl = document.getElementById('linkedin-text');
+      const liBadges = document.getElementById('linkedin-badges');
+      if (liEl && liBadges) {
+        const len = [...(liEl.value || '')].length;
+        const cls = len > 3000 ? 'over' : len > 2600 ? 'warn' : 'ok';
+        liBadges.innerHTML = pillHtml(len + '/3000 chars', cls);
+      }
+
+      // Dev.to: char + line summary
+      const devtoEl = document.getElementById('devto-text');
+      const devtoBadges = document.getElementById('devto-badges');
+      if (devtoEl && devtoBadges) {
+        const val = devtoEl.value || '';
+        const len = [...val].length;
+        const lines = val ? val.split('\\n').length : 0;
+        devtoBadges.innerHTML = pillHtml(len + ' chars · ' + lines + ' lines', 'neutral');
+      }
+
       // Extras & work reports
       [
         ['douyin-extra', 'douyin-extra-badge'],
         ['bilibili-extra', 'bilibili-extra-badge'],
+        ['x-extra', 'x-extra-badge'],
         ['work-plain', 'work-plain-badge'],
         ['work-md', 'work-md-badge'],
       ].forEach(([srcId, badgeId]) => {
@@ -1361,6 +1573,33 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
           badge.textContent = [...(src.value || '')].length + ' 字';
         }
       });
+    }
+
+    function syncGlobalIntentLinks() {
+      const xEl = document.getElementById('x-text');
+      const xLink = document.getElementById('x-intent-link');
+      if (xEl && xLink) {
+        xLink.href = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(xEl.value || '');
+      }
+
+      const bskyEl = document.getElementById('bluesky-text');
+      const bskyLink = document.getElementById('bluesky-intent-link');
+      if (bskyEl && bskyLink) {
+        bskyLink.href = 'https://bsky.app/intent/compose?text=' + encodeURIComponent(bskyEl.value || '');
+      }
+
+      const rdTitleEl = document.getElementById('reddit-title');
+      const rdTextEl = document.getElementById('reddit-text');
+      const rdLink = document.getElementById('reddit-intent-link');
+      if (rdLink) {
+        const title = (rdTitleEl && rdTitleEl.value) || '';
+        const body = ((rdTextEl && rdTextEl.value) || '').slice(0, 1200);
+        rdLink.href =
+          'https://www.reddit.com/submit?type=TEXT&title=' +
+          encodeURIComponent(title) +
+          '&text=' +
+          encodeURIComponent(body);
+      }
     }
 
     function syncPhoneCaption() {
@@ -1377,6 +1616,9 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       updateCharCounts();
       if (platformId === 'xiaohongshu') {
         syncPhoneCaption();
+      }
+      if (platformId === 'x' || platformId === 'bluesky' || platformId === 'reddit') {
+        syncGlobalIntentLinks();
       }
     }
 
@@ -1476,6 +1718,30 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       document.getElementById('douyin-text').value = v.platforms.douyin.text;
       document.getElementById('douyin-extra').value = v.platforms.douyin.extra;
       document.getElementById('github-text').value = v.platforms.github.text;
+      if (v.platforms.x) {
+        const xEl = document.getElementById('x-text');
+        const xExtraEl = document.getElementById('x-extra');
+        if (xEl) xEl.value = v.platforms.x.text;
+        if (xExtraEl) xExtraEl.value = v.platforms.x.extra || '';
+      }
+      if (v.platforms.bluesky) {
+        const bskyEl = document.getElementById('bluesky-text');
+        if (bskyEl) bskyEl.value = v.platforms.bluesky.text;
+      }
+      if (v.platforms.reddit) {
+        const rdTitleEl = document.getElementById('reddit-title');
+        const rdTextEl = document.getElementById('reddit-text');
+        if (rdTitleEl) rdTitleEl.value = v.platforms.reddit.title || '';
+        if (rdTextEl) rdTextEl.value = v.platforms.reddit.text || '';
+      }
+      if (v.platforms.linkedin) {
+        const liEl = document.getElementById('linkedin-text');
+        if (liEl) liEl.value = v.platforms.linkedin.text;
+      }
+      if (v.platforms.devto) {
+        const devtoEl = document.getElementById('devto-text');
+        if (devtoEl) devtoEl.value = v.platforms.devto.text;
+      }
       document.getElementById('svg-vertical').innerHTML = v.verticalSvg;
       document.getElementById('svg-horizontal').innerHTML = v.horizontalSvg;
       v.slides.forEach((slide, idx) => {
@@ -1492,6 +1758,7 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       document.querySelectorAll('.style-btn').forEach((btn) => {
         btn.classList.toggle('active', btn.dataset.style === styleId);
       });
+      syncGlobalIntentLinks();
       updateCharCounts();
       syncPhoneCaption();
       renderPhoneSlide();
@@ -1689,6 +1956,7 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
 
     // Initial live hydration
     hydrateMascotImages(document.getElementById('workspace'));
+    syncGlobalIntentLinks();
     updateCharCounts();
     syncPhoneCaption();
     renderPhoneSlide();
@@ -1734,6 +2002,11 @@ export function writeDevlogBundle(
     xiaohongshu: join(bundleDir, 'xiaohongshu.md'),
     bilibili: join(bundleDir, 'bilibili.md'),
     douyin: join(bundleDir, 'douyin.md'),
+    x: join(bundleDir, 'x.md'),
+    reddit: join(bundleDir, 'reddit.md'),
+    linkedin: join(bundleDir, 'linkedin.md'),
+    bluesky: join(bundleDir, 'bluesky.md'),
+    devto: join(bundleDir, 'devto.md'),
     workDailyMd: join(bundleDir, 'work-daily.md'),
     workDailyPlain: join(bundleDir, 'work-daily-plain.txt'),
     imagePrompts: join(bundleDir, 'image-prompts.json'),
@@ -1756,6 +2029,23 @@ export function writeDevlogBundle(
     `${formatted.platforms.douyin.content}\n\n---\n\n${formatted.platforms.douyin.videoScript}\n`,
     'utf8'
   );
+  writeFileSync(
+    files.x,
+    `${formatted.platforms.x.content}\n\n---\n\n### Thread\n\n${formatted.platforms.x.thread}\n\n---\n\nIntent URL: ${formatted.platforms.x.intentUrl}\n`,
+    'utf8'
+  );
+  writeFileSync(
+    files.reddit,
+    `# ${formatted.platforms.reddit.title}\n\n${formatted.platforms.reddit.content}\n\n---\n\nSuggested Subreddits: ${(formatted.platforms.reddit.suggestedSubreddits || []).join(', ')}\nSubmit URL: ${formatted.platforms.reddit.submitUrl}\n`,
+    'utf8'
+  );
+  writeFileSync(files.linkedin, formatted.platforms.linkedin.content + '\n', 'utf8');
+  writeFileSync(
+    files.bluesky,
+    `${formatted.platforms.bluesky.content}\n\n---\n\nIntent URL: ${formatted.platforms.bluesky.intentUrl}\n`,
+    'utf8'
+  );
+  writeFileSync(files.devto, formatted.platforms.devto.content + '\n', 'utf8');
   writeFileSync(files.workDailyMd, workReport.markdown + '\n', 'utf8');
   writeFileSync(files.workDailyPlain, workReport.qqText + '\n', 'utf8');
   writeFileSync(

@@ -7,6 +7,7 @@
 - **小红书**：强钩子图文笔记 + 3:4 竖版封面与 P1~P4 轮播套图（SVG，浏览器预览页可一键导出 PNG）
 - **B站**：图文动态 + 60 秒口播视频大纲 + 16:9 横版进度卡片
 - **抖音**：极简图文笔记 + 30 秒快节奏口播脚本 + 3:4 竖版封面与 4 图轮播套图
+- **海外开发者平台（Build in Public）**：原生英文适配 **X (Twitter)**（≤280 字符单推 + 3–4 条串推 Thread + 预填直发链接）、**Reddit**（真实不营销 Showoff 长帖 + 推荐版块 + 预填发帖链接）、**LinkedIn**（克制工程复盘帖）、**Bluesky**（≤300 字符 + ATProto 直发 / Intent 链接）与 **Dev.to**（含 YAML Frontmatter 的完整 Markdown + 官方 API 草稿直发）
 - **团队日报 / 周报**：纯文本 + Markdown 双模板，支持飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ (OneBot v11)
 
 ---
@@ -155,7 +156,7 @@ node src/cli.js generate \
 node src/cli.js generate --json
 ```
 
-### 2. 发布到 GitHub / 自动填入平台草稿箱
+### 2. 发布到 GitHub / 海外平台 / 自动填入平台草稿箱
 
 ```bash
 # 预览 GitHub Release 发布（默认 dry-run）
@@ -163,6 +164,21 @@ node src/cli.js publish-github --mode release --tag v0.5.2
 
 # 真正追加写入本地 DEVLOG.md
 node src/cli.js publish-github --mode devlog_file --execute
+
+# 海外平台发布（默认 dry-run；省略 --bundle 自动选取 out/ 下最新 bundle）
+# X / Reddit / LinkedIn 零 API Key，返回预填 Intent URL 与即发正文
+node src/cli.js publish-global --platform x
+node src/cli.js publish-global --platform reddit
+node src/cli.js publish-global --platform linkedin
+
+# Dev.to 官方 API（默认创建 published: false 草稿，加 --published 才公开）
+export DEVTO_API_KEY=your_devto_api_key
+node src/cli.js publish-global --platform devto
+node src/cli.js publish-global --platform devto --execute
+
+# Bluesky（支持零 Key intentUrl，或配置 BLUESKY_HANDLE + BLUESKY_APP_PASSWORD 走官方 ATProto 直发）
+node src/cli.js publish-global --platform bluesky
+node src/cli.js publish-global --platform bluesky --execute
 
 # 预览独立浏览器存草稿计划（省略 --bundle 会自动选取 out/ 下最新 bundle）
 node src/cli.js save-draft --platform xiaohongshu
