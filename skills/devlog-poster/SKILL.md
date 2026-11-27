@@ -73,11 +73,26 @@ Run `generate --open` with your distilled bullets:
 
 Useful optional flags:
 - `--repo <path>`: target repository path (defaults to current working directory)
+- `--scan-dir <path>`: scan a parent directory for active git repos in `--since` (repeatable or comma-separated)
+- `--repos <paths>`: explicitly aggregate multiple git repo paths (repeatable or comma-separated)
+- `--all-watched`: aggregate all repos configured via `watchDirs` / `watchRepos`
+- `--max-depth <n>`: max scan depth for `--scan-dir` / `--all-watched` (default `2`)
 - `--name <project>`: override display project name
 - `--title <text>`: override devlog title
 - `--since <window>`: git log window (default `"24 hours ago"`, e.g. `"7 days ago"` for weekly wrap-ups)
 - `--out <dir>`: output directory (default `out`)
 - `--json`: emit machine-readable JSON paths
+
+For multi-project daily/weekly summaries, configure watched folders once or pass `--scan-dir`:
+
+```bash
+# Save watched parent directories once
+"${DEVLOG_CMD[@]}" config set watchDirs ~/workspace
+
+# Auto-aggregate all active repos today (excludes repos with no commits in --since)
+"${DEVLOG_CMD[@]}" generate --all-watched --open
+"${DEVLOG_CMD[@]}" send-report --scan-dir ~/workspace --period daily
+```
 
 After generating, report the bundle path, `preview.html` path, and a concise summary of the generated platforms (GitHub, Xiaohongshu, Bilibili, Douyin, Daily Work Report, and P1–P4 carousel slides).
 

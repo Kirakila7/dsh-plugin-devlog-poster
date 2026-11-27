@@ -8,8 +8,56 @@ function formatDateCN(isoString) {
 
 function pickItems(context) {
   if (context.highlights?.length > 0) return context.highlights;
-  if (context.commits?.length > 0) return context.commits.slice(0, 8).map((c) => c.subject);
+  if (context.commits?.length > 0) {
+    return context.commits
+      .slice(0, 8)
+      .map((c) => (context.isMultiRepo && c.project ? `[${c.project}] ${c.subject}` : c.subject));
+  }
   return ['推进当前模块开发与联调验证'];
+}
+
+function buildMultiRepoPlainLines(projects) {
+  const lines = [];
+  for (const proj of projects) {
+    const name = proj.shortName || proj.projectName;
+    const projStats = proj.stats || {};
+    const statTag =
+      projStats.filesChanged > 0
+        ? `（改动 ${projStats.filesChanged} 个文件，+${projStats.insertions || 0}/-${projStats.deletions || 0}）`
+        : '';
+    lines.push(`[${name}]${statTag}`);
+    const commits = proj.commits || [];
+    if (commits.length > 0) {
+      for (const c of commits) {
+        lines.push(`- ${c.subject}`);
+      }
+    } else {
+      lines.push('- 推进阶段性开发与整理');
+    }
+  }
+  return lines;
+}
+
+function buildMultiRepoMarkdownLines(projects) {
+  const lines = [];
+  for (const proj of projects) {
+    const name = proj.shortName || proj.projectName;
+    const projStats = proj.stats || {};
+    const statTag =
+      projStats.filesChanged > 0
+        ? `（改动 ${projStats.filesChanged} 个文件，+${projStats.insertions || 0} / -${projStats.deletions || 0}）`
+        : '';
+    lines.push(`- **[${name}]**${statTag}`);
+    const commits = proj.commits || [];
+    if (commits.length > 0) {
+      for (const c of commits) {
+        lines.push(`  - ${c.subject}`);
+      }
+    } else {
+      lines.push('  - 推进阶段性开发与整理');
+    }
+  }
+  return lines;
 }
 
 /**
@@ -22,26 +70,59 @@ export function formatWorkReport(context, { period = 'daily', title } = {}) {
   const nextLabel = isWeekly ? '下周计划' : '明日计划';
   const dateStr = formatDateCN(context.collectedAt);
   const shortName = context.projectName.split('/').pop() || context.projectName;
+  const isMultiRepo = Boolean(context.isMultiRepo && context.projects?.length > 0);
+  const hasExplicitHighlights = Boolean(context.highlights?.length > 0);
 
   const items = pickItems(context);
   const pitfalls = context.pitfalls || [];
   const nextSteps = context.nextSteps || [];
   const { filesChanged = 0, insertions = 0, deletions = 0 } = context.stats || {};
-  const statsSummary =
-    filesChanged > 0
+  const statsSummary = isMultiRepo
+    ? filesChanged > 0
+      ? `活跃 ${context.projects.length} 个项目，改动 ${filesChanged} 个文件（+${insertions} / -${deletions} 行）`
+      : `活跃 ${context.projects.length} 个项目，共完成 ${items.length} 项工作`
+    : filesChanged > 0
       ? `改动 ${filesChanged} 个文件（+${insertions} / -${deletions} 行）`
       : `共完成 ${items.length} 项工作`;
 
   const reportTitle = title || `【工作${periodLabel} ${dateStr}】${shortName}`;
 
+  const projectNames = isMultiRepo
+    ? context.projects.map((p) => p.shortName || p.projectName)
+    : [];
+
+  const qqDoneLines = isMultiRepo
+    ? hasExplicitHighlights
+      ? [
+          ...context.highlights.map((item, idx) => `${idx + 1}. ${item}`),
+          '',
+          '各项目进展：',
+          ...buildMultiRepoPlainLines(context.projects),
+        ]
+      : buildMultiRepoPlainLines(context.projects)
+    : items.map((item, idx) => `${idx + 1}. ${item}`);
+
+  const mdDoneLines = isMultiRepo
+    ? hasExplicitHighlights
+      ? [
+          ...context.highlights.map((item) => `- ${item}`),
+          '',
+          '##### 各项目进展',
+          ...buildMultiRepoMarkdownLines(context.projects),
+        ]
+      : buildMultiRepoMarkdownLines(context.projects)
+    : items.map((item) => `- ${item}`);
+
   // Clean plain text tailored for QQ group/private chat (no raw markdown symbols)
   const qqText = [
     reportTitle,
-    `项目：${context.projectName}（分支 ${context.branch || 'main'}）`,
+    isMultiRepo
+      ? `项目：${context.projectName}（活跃仓库：${projectNames.join('、')}）`
+      : `项目：${context.projectName}（分支 ${context.branch || 'main'}）`,
     `概览：${statsSummary}`,
     '',
     `一、${doneLabel}`,
-    ...items.map((item, idx) => `${idx + 1}. ${item}`),
+    ...qqDoneLines,
     ...(pitfalls.length > 0
       ? ['', '二、风险与卡点', ...pitfalls.map((p, idx) => `${idx + 1}. ${p}`)]
       : []),
@@ -57,11 +138,13 @@ export function formatWorkReport(context, { period = 'daily', title } = {}) {
   // Markdown version for Feishu / DingTalk / WeCom / Slack / Discord / Docs
   const markdown = [
     `### ${reportTitle}`,
-    `- **项目**：\`${context.projectName}\` (\`${context.branch || 'main'}\`)`,
+    isMultiRepo
+      ? `- **项目**：\`${context.projectName}\`（${projectNames.map((n) => `\`${n}\``).join('、')}）`
+      : `- **项目**：\`${context.projectName}\` (\`${context.branch || 'main'}\`)`,
     `- **产出概览**：${statsSummary}`,
     '',
     `#### ${doneLabel}`,
-    ...items.map((item) => `- ${item}`),
+    ...mdDoneLines,
     ...(pitfalls.length > 0
       ? ['', '#### 风险与卡点', ...pitfalls.map((p) => `- ${p}`)]
       : []),

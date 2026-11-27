@@ -82,6 +82,28 @@ node src/cli.js config set aiApiKey sk-xxx
 
 ---
 
+## 🗂️ 多项目自动聚合（日报 / 周报 / 跨仓 Devlog）
+
+一天同时推进多个仓库？无需手动切换目录，直接指定父目录或配置 `watchDirs` / `watchRepos`，插件会自动扫描活跃仓库（严格按 `--since` 时间窗口过滤，无提交的仓库自动跳过），并在日报/周报与 GitHub 更新日志中按 `[项目名]` 自动分组汇总：
+
+```bash
+# 1. 临时扫描父目录下的所有活跃仓库（默认深度 2，自动跳过 node_modules / dist 等目录）
+node src/cli.js generate --scan-dir ~/workspace --since "24 hours ago" --open
+node src/cli.js send-report --scan-dir ~/workspace --period daily
+
+# 2. 显式指定多个仓库路径（支持逗号分隔或重复传参）
+node src/cli.js send-report --repos ~/workspace/app-a,~/workspace/app-b --period weekly
+
+# 3. 持久化常用工作区，后续一条 --all-watched 搞定每日多项目汇总
+node src/cli.js config set watchDirs ~/workspace
+node src/cli.js generate --all-watched --open
+node src/cli.js send-report --all-watched --period daily
+```
+
+> 默认不传多仓库参数时，100% 保持单仓库行为不变；也可通过 `--max-depth <n>` 控制目录扫描深度。
+
+---
+
 ## 安装为 DSH 插件
 
 推送到 GitHub 后，可通过 DSH CLI 安装：
@@ -94,11 +116,11 @@ dsh plugin --profile web add github:Kirakila7/dsh-plugin-devlog-poster
 
 | 工具名 | 作用 |
 | --- | --- |
-| `devlog_collect_context` | 读取本地 Git 仓库的近期 commits、增删行数、改动文件 |
-| `devlog_generate_bundle` | 一键生成 GitHub / 小红书 / B站 / 抖音文案、双比例 SVG 卡片、P1~P4 轮播套图与支持 4 风格实时换肤的 `preview.html` |
+| `devlog_collect_context` | 读取本地 Git 仓库的近期 commits、增删行数、改动文件（支持 `scanDirs` / `repos` 多仓自动聚合） |
+| `devlog_generate_bundle` | 一键生成 GitHub / 小红书 / B站 / 抖音文案、双比例 SVG 卡片、P1~P4 轮播套图与支持 4 风格实时换肤的 `preview.html`（支持 `scanDirs` / `repos` 多仓聚合） |
 | `devlog_publish_github` | 追加写入 `DEVLOG.md` 或调用 `gh release create` 发布（默认 `dryRun: true` 防误发） |
 | `devlog_save_draft` | 使用独立 Playwright 浏览器自动渲染 PNG 卡片并填表存入小红书 / B站 / 抖音草稿箱（永不自动点发布，默认 `dryRun: true`） |
-| `devlog_send_work_report` | 生成结构化工作日报/周报，并通过 Webhook 推送到 **飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ (OneBot v11)**（默认 `dryRun: true`） |
+| `devlog_send_work_report` | 生成结构化工作日报/周报（支持 `scanDirs` / `repos` 按项目分组汇总），并通过 Webhook 推送到 **飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ (OneBot v11)**（默认 `dryRun: true`） |
 | `devlog_generate_image` | 图文版专用：按平台（小红书 3:4 / B站 16:9 / 抖音 3:4 / GitHub 16:9）与模型风格生成生图提示词模板，并可绑定 **OpenAI / Gemini Imagen / 火山引擎 Seedream / OpenAI 兼容端点** 出图（默认 `dryRun: true`） |
 
 ---

@@ -1,4 +1,8 @@
-import { collectGitContext } from './git-context.js';
+import {
+  collectGitContext,
+  collectMultiRepoContext,
+  discoverGitRepos,
+} from './git-context.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
 import { savePlatformDraft } from './draft-automation.js';
@@ -15,16 +19,49 @@ import { mergeAiSummary, summarizeWithAI } from './ai-summarizer.js';
 export const name = 'dsh-plugin-devlog-poster';
 export const inject = ['tools'];
 
+function hasMultiRepoArgs(args = {}) {
+  const hasScanDirs = Array.isArray(args.scanDirs)
+    ? args.scanDirs.length > 0
+    : typeof args.scanDirs === 'string' && args.scanDirs.trim().length > 0;
+  const hasRepos = Array.isArray(args.repos)
+    ? args.repos.length > 0
+    : typeof args.repos === 'string' && args.repos.trim().length > 0;
+  return hasScanDirs || hasRepos;
+}
+
+function resolveToolContext(args = {}, defaultSince) {
+  if (hasMultiRepoArgs(args)) {
+    return collectMultiRepoContext({
+      scanDirs: args.scanDirs,
+      repos: args.repos,
+      since: args.since || defaultSince || '24 hours ago',
+      maxCommitsPerRepo: args.maxCommits || 6,
+      maxDepth: args.maxDepth ?? 2,
+      projectName: args.projectName,
+      highlights: args.highlights,
+      pitfalls: args.pitfalls,
+      nextSteps: args.nextSteps,
+    });
+  }
+  return collectGitContext(defaultSince ? { ...args, since: args.since || defaultSince } : args);
+}
+
 function renderCollectContext(value) {
   const commits = value?.commits || [];
   const stats = value?.stats || { filesChanged: 0, insertions: 0, deletions: 0 };
   const topSubjects = commits
     .slice(0, 3)
-    .map((c) => `  - \`${c.hash || ''}\` ${c.subject}`.trimEnd());
+    .map((c) => {
+      const ref = c.sha || c.hash || '';
+      const label = c.displaySubject || (c.project ? `[${c.project}] ${c.subject}` : c.subject);
+      return `  - \`${ref}\` ${label}`.trimEnd();
+    });
 
   const lines = [
     `### 📦 Git 上下文已采集 · ${value?.projectName || 'unknown'}`,
-    `- **分支**：\`${value?.branch || 'main'}\`${value?.isGitRepo === false ? '（非 Git 仓库，将使用手动要点）' : ''}`,
+    value?.isMultiRepo
+      ? `- **多仓库汇总**：扫描 ${value.scannedRepoCount ?? 0} 个仓库，活跃 ${value.activeRepoCount ?? 0} 个（${(value.projects || []).map((p) => `\`${p.shortName}\``).join('、') || '无'}）`
+      : `- **分支**：\`${value?.branch || 'main'}\`${value?.isGitRepo === false ? '（非 Git 仓库，将使用手动要点）' : ''}`,
     `- **近期提交**：${commits.length} 条 · 改动 ${stats.filesChanged} 个文件（+${stats.insertions} / -${stats.deletions}）`,
   ];
 
@@ -213,6 +250,23 @@ function createToolSpecs(runtimeConfig = {}) {
           required: false,
           description: 'Optional display name override for the project.',
         },
+        scanDirs: {
+          type: 'array',
+          required: false,
+          description:
+            'Optional parent directories to scan for active git repos (accepts array or comma-separated string).',
+        },
+        repos: {
+          type: 'array',
+          required: false,
+          description:
+            'Optional explicit git repository paths to aggregate (accepts array or comma-separated string).',
+        },
+        maxDepth: {
+          type: 'number',
+          required: false,
+          description: 'Max scan depth when using scanDirs (default: 2).',
+        },
       },
       output: {
         schema: { type: 'object' },
@@ -224,7 +278,7 @@ function createToolSpecs(runtimeConfig = {}) {
         ],
       },
       async execute(args = {}) {
-        return collectGitContext(args);
+        return resolveToolContext(args);
       },
     },
     {
@@ -236,6 +290,23 @@ function createToolSpecs(runtimeConfig = {}) {
           type: 'string',
           required: false,
           description: 'Local git repository path.',
+        },
+        scanDirs: {
+          type: 'array',
+          required: false,
+          description:
+            'Optional parent directories to scan for active git repos (enables multi-project aggregation).',
+        },
+        repos: {
+          type: 'array',
+          required: false,
+          description:
+            'Optional explicit git repository paths to aggregate (enables multi-project aggregation).',
+        },
+        maxDepth: {
+          type: 'number',
+          required: false,
+          description: 'Max scan depth when using scanDirs (default: 2).',
         },
         projectName: {
           type: 'string',
@@ -321,7 +392,7 @@ function createToolSpecs(runtimeConfig = {}) {
       },
       async execute(args = {}) {
         const style = args.style || config.defaultStyle || 'big_fat_fish';
-        let context = collectGitContext(args);
+        let context = resolveToolContext(args);
         let title = args.title;
         let aiSummary = null;
 
@@ -483,6 +554,23 @@ function createToolSpecs(runtimeConfig = {}) {
           required: false,
           description: 'Local git repository path.',
         },
+        scanDirs: {
+          type: 'array',
+          required: false,
+          description:
+            'Optional parent directories to scan for active git repos (enables multi-project work report).',
+        },
+        repos: {
+          type: 'array',
+          required: false,
+          description:
+            'Optional explicit git repository paths to aggregate (enables multi-project work report).',
+        },
+        maxDepth: {
+          type: 'number',
+          required: false,
+          description: 'Max scan depth when using scanDirs (default: 2).',
+        },
         projectName: {
           type: 'string',
           required: false,
@@ -583,7 +671,7 @@ function createToolSpecs(runtimeConfig = {}) {
       async execute(args = {}) {
         const period = args.period === 'weekly' ? 'weekly' : 'daily';
         const since = args.since || (period === 'weekly' ? '7 days ago' : '24 hours ago');
-        let context = collectGitContext({ ...args, since });
+        let context = resolveToolContext(args, since);
         let title = args.title;
         let aiSummary = null;
 
@@ -742,6 +830,8 @@ export function apply(ctx, config = {}) {
 
 export {
   collectGitContext,
+  collectMultiRepoContext,
+  discoverGitRepos,
   formatMultiPlatformDevlog,
   writeDevlogBundle,
   publishToGitHub,

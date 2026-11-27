@@ -22,6 +22,8 @@ export const DEFAULT_CONFIG = {
   reportEndpoint: '',
   qqGroupId: '',
   qqUserId: '',
+  watchDirs: '',
+  watchRepos: '',
 };
 
 export const SECRET_CONFIG_KEYS = ['reportToken', 'imageApiKey', 'aiApiKey'];
@@ -149,6 +151,28 @@ export function validateConfigPatch(patch = {}) {
         continue;
       }
       normalized[key] = normalizedProvider;
+      continue;
+    }
+
+    if (key === 'watchDirs' || key === 'watchRepos') {
+      if (typeof rawValue === 'string') {
+        normalized[key] = rawValue
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean)
+          .join(',');
+        continue;
+      }
+      if (Array.isArray(rawValue) && rawValue.every((item) => typeof item === 'string')) {
+        normalized[key] = rawValue
+          .flatMap((item) => item.split(','))
+          .map((item) => item.trim())
+          .filter(Boolean);
+        continue;
+      }
+      errors.push(
+        `Invalid ${key}: must be a comma-separated string or an array of path strings`
+      );
       continue;
     }
 

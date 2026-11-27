@@ -305,6 +305,63 @@ export function collectRichDiffContext({
 }
 
 /**
+ * Collect bounded `git log --stat` across active repositories in a multi-repo context,
+ * staying strictly within `maxLogChars` (default: 6000 chars).
+ */
+export function collectMultiRepoDiffContext({
+  projects = [],
+  since = '24 hours ago',
+  maxCommitsPerRepo = 6,
+  maxLogChars = 6000,
+} = {}) {
+  const activeProjects = Array.isArray(projects) ? projects : [];
+  if (activeProjects.length === 0) {
+    return {
+      isGitRepo: false,
+      isMultiRepo: true,
+      logStat: '',
+      patchSnippet: '',
+      truncated: false,
+      range: 'multi:0repos',
+    };
+  }
+
+  const perRepoCap = Math.max(400, Math.floor(maxLogChars / activeProjects.length));
+  const sections = [];
+  let anyTruncated = false;
+
+  for (const proj of activeProjects) {
+    if (!proj?.repoPath) continue;
+    const rawLogStat = runGit(proj.repoPath, [
+      'log',
+      '-n',
+      String(Math.max(1, Number(maxCommitsPerRepo) || 6)),
+      `--since=${since}`,
+      '--stat',
+      '--date=short',
+      '--pretty=format:%h %ad %an | %s',
+    ]);
+    if (!rawLogStat) continue;
+
+    const header = `=== [${proj.shortName || proj.projectName || basename(proj.repoPath)}] (${proj.branch || 'main'}) ===`;
+    const bodyBudget = Math.max(120, perRepoCap - header.length - 4);
+    const boundedRepoLog = truncateCleanly(rawLogStat, bodyBudget);
+    if (boundedRepoLog.truncated) anyTruncated = true;
+    sections.push(`${header}\n${boundedRepoLog.text}`);
+  }
+
+  const boundedAll = truncateCleanly(sections.join('\n\n'), maxLogChars);
+  return {
+    isGitRepo: sections.length > 0,
+    isMultiRepo: true,
+    logStat: boundedAll.text,
+    patchSnippet: '',
+    truncated: anyTruncated || boundedAll.truncated,
+    range: `multi:${activeProjects.length}repos`,
+  };
+}
+
+/**
  * Build system & user prompts bound to the active AI-girl style's copyPrompt.
  */
 export function buildSummaryPrompts({
@@ -317,6 +374,7 @@ export function buildSummaryPrompts({
   const projectName = context.projectName || basename(context.repoPath || process.cwd());
   const branch = context.branch || 'main';
   const stats = context.stats || { filesChanged: 0, insertions: 0, deletions: 0 };
+  const isMultiRepo = Boolean(context.isMultiRepo && context.projects?.length > 0);
 
   const schemaInstruction = [
     '你必须只返回一个合法的 JSON 对象（不要输出额外解释文字或 Markdown 代码块包裹），结构如下：',
@@ -326,7 +384,9 @@ export function buildSummaryPrompts({
     '  "pitfalls": ["1-3 条真实踩坑/排障/权衡取舍（若 diff 中无明显踩坑，可写架构取舍或边界处理）"],',
     '  "nextSteps": ["1-3 条贴合当前代码演进的下一步计划"]',
     '}',
-    '约束：严格基于提供的 git 提交、改动文件与 diff 片段提炼，禁止编造不存在的功能或数据；每条控制在 15-55 字左右，自然好读。',
+    isMultiRepo
+      ? '约束：当前为多项目汇总，严格基于各仓库提供的 git 提交与统计提炼，每条 highlight 建议带上 [项目名] 前缀，禁止编造不存在的功能或数据；每条控制在 15-55 字左右，自然好读。'
+      : '约束：严格基于提供的 git 提交、改动文件与 diff 片段提炼，禁止编造不存在的功能或数据；每条控制在 15-55 字左右，自然好读。',
   ].join('\n');
 
   const systemPrompt =
@@ -339,13 +399,26 @@ export function buildSummaryPrompts({
 
   const commitLines = (context.commits || [])
     .slice(0, 12)
-    .map((c) => `- ${c.sha || ''} (${c.date || ''}) ${c.subject || ''}`.trim());
+    .map((c) => {
+      const prefix = c.project ? `[${c.project}] ` : '';
+      return `- ${c.sha || ''} (${c.date || ''}) ${prefix}${c.subject || ''}`.trim();
+    });
 
   const sections = [
     `项目：${projectName}`,
     `分支：${branch}`,
     `变更统计：${stats.filesChanged || 0} files changed (+${stats.insertions || 0} / -${stats.deletions || 0})`,
   ];
+
+  if (isMultiRepo) {
+    const repoSummary = context.projects
+      .map(
+        (p) =>
+          `${p.shortName || p.projectName} (${p.commits?.length || 0} commits, +${p.stats?.insertions || 0}/-${p.stats?.deletions || 0})`
+      )
+      .join('；');
+    sections.push(`活跃仓库（${context.projects.length} 个）：${repoSummary}`);
+  }
 
   if (commitLines.length > 0) {
     sections.push(`近期提交：\n${commitLines.join('\n')}`);
@@ -661,12 +734,19 @@ export async function summarizeWithAI({
     };
   }
 
-  const diffContext = collectRichDiffContext({
-    repoPath,
-    since,
-    maxCommits,
-    maxPatchChars,
-  });
+  const diffContext = context?.isMultiRepo
+    ? collectMultiRepoDiffContext({
+        projects: context.projects || [],
+        since,
+        maxCommitsPerRepo: Math.min(maxCommits, 6),
+        maxLogChars: Math.min(maxPatchChars, 6000),
+      })
+    : collectRichDiffContext({
+        repoPath,
+        since,
+        maxCommits,
+        maxPatchChars,
+      });
 
   const prompts = buildSummaryPrompts({
     context: { ...context, repoPath },

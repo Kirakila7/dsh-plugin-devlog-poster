@@ -3,7 +3,12 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, realpathSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { collectGitContext } from './git-context.js';
+import {
+  collectGitContext,
+  collectMultiRepoContext,
+  discoverGitRepos,
+  normalizePathList,
+} from './git-context.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
 import { publishToGitHub, writeDevlogBundle } from './publisher.js';
 import { DRAFT_PLATFORMS, savePlatformDraft } from './draft-automation.js';
@@ -64,16 +69,20 @@ const VALUE_FLAGS = new Map([
   ['--ai-model', 'aiModel'],
   ['--ai-endpoint', 'aiEndpoint'],
   ['--ai-api-key', 'aiApiKey'],
+  ['--max-depth', 'maxDepth'],
 ]);
 
 const ARRAY_FLAGS = new Map([
   ['--highlight', 'highlights'],
   ['--pitfall', 'pitfalls'],
   ['--next', 'nextSteps'],
+  ['--scan-dir', 'scanDirs'],
+  ['--repos', 'repos'],
 ]);
 
 const BOOLEAN_FLAGS = new Map([
   ['--ai', 'ai'],
+  ['--all-watched', 'allWatched'],
   ['--execute', 'execute'],
   ['--open', 'open'],
   ['--local', 'local'],
@@ -123,6 +132,8 @@ export function parseArgs(argv) {
     highlights: [],
     pitfalls: [],
     nextSteps: [],
+    scanDirs: [],
+    repos: [],
     positionals: [],
     unknownFlags: [],
   };
@@ -279,7 +290,7 @@ Usage:
   devlog-poster doctor [--repo <path>] [--json]
   devlog-poster publish-github [--mode devlog_file|release] [--tag <tag>] [--gh-repo <owner/repo>] [--execute]
   devlog-poster save-draft [--platform xiaohongshu|bilibili|douyin] [--bundle <dir>] [--profile-dir <dir>] [--execute]
-  devlog-poster send-report [--channel feishu|dingtalk|wecom|slack|discord|qq_onebot] [--period daily|weekly] [--ai] [--endpoint <url>] [--token <tok>] [--group-id <id>] [--user-id <id>] [--execute]
+  devlog-poster send-report [--channel feishu|dingtalk|wecom|slack|discord|qq_onebot] [--period daily|weekly] [--scan-dir <path>] [--repos <paths>] [--all-watched] [--max-depth <n>] [--ai] [--endpoint <url>] [--token <tok>] [--group-id <id>] [--user-id <id>] [--execute]
   devlog-poster generate-image [--platform xiaohongshu|bilibili|douyin|github] [--provider openai|gemini|volcengine|custom_openai|svg_fallback] [--style <id>] [--model <name>] [--endpoint <url>] [--api-key <key>] [--output <file>] [--execute]
   devlog-poster config show [--repo <path>] [--json]
   devlog-poster config set <key> <value> [--local] [--repo <path>]
@@ -295,6 +306,10 @@ Common Generate Options:
   --style <id>                 big_fat_fish (default) | gemini | chatgpt | claude
                                (aliases: fish, hakimi, gpt)
   --repo <path>                Local git repository path (default: cwd)
+  --scan-dir <path>            Scan parent directory for active git repos (repeatable or comma-separated)
+  --repos <paths>              Aggregate explicit git repository paths (repeatable or comma-separated)
+  --all-watched                Aggregate all repos from config watchDirs & watchRepos
+  --max-depth <n>              Max directory scan depth for --scan-dir / --all-watched (default: 2)
   --name <project>             Override display project name
   --title <text>               Override devlog title
   --since <window>             Git log window (default: "24 hours ago")
@@ -309,8 +324,11 @@ Common Generate Options:
 Quick Examples:
   node src/cli.js generate --open
   node src/cli.js generate --ai --open
+  node src/cli.js generate --scan-dir ~/workspace --since "24 hours ago" --open
+  node src/cli.js send-report --all-watched --period daily
   node src/cli.js doctor
   node src/cli.js config set defaultStyle gemini --local
+  node src/cli.js config set watchDirs ~/workspace
   node src/cli.js save-draft --platform xiaohongshu
 `;
 }
@@ -390,6 +408,27 @@ async function runDoctor(opts, savedCfg) {
     hint: sourceLabels.length
       ? ''
       : 'Optional: node src/cli.js config set defaultStyle big_fat_fish',
+  });
+
+  // 4b. Watched multi-repo directories & repos (optional)
+  const watchedDirs = normalizePathList(savedCfg.watchDirs);
+  const watchedRepos = normalizePathList(savedCfg.watchRepos);
+  const discoveredWatched =
+    watchedDirs.length > 0 || watchedRepos.length > 0
+      ? discoverGitRepos({ scanDirs: watchedDirs, repos: watchedRepos })
+      : [];
+  checks.push({
+    id: 'multi_repo',
+    label: 'Watched multi-repo sources',
+    status: 'ok',
+    detail:
+      watchedDirs.length > 0 || watchedRepos.length > 0
+        ? `${watchedDirs.length} dir(s), ${watchedRepos.length} repo(s) (${discoveredWatched.length} git repos discovered)`
+        : '0 dirs, 0 repos (optional; set watchDirs/watchRepos or pass --scan-dir)',
+    hint:
+      watchedDirs.length > 0 || watchedRepos.length > 0
+        ? ''
+        : 'Optional: node src/cli.js config set watchDirs ~/workspace',
   });
 
   // 5. Work report webhook readiness (optional)
@@ -623,6 +662,62 @@ function inferErrorHint(err, command) {
   return 'Run `node src/cli.js --help` or `node src/cli.js doctor` to inspect your setup';
 }
 
+function collectCliContext(opts, savedCfg, { repoPath, since }) {
+  const hasScanDirs = Array.isArray(opts.scanDirs) && opts.scanDirs.length > 0;
+  const hasRepos = Array.isArray(opts.repos) && opts.repos.length > 0;
+  const useAllWatched = Boolean(opts.allWatched);
+
+  if (!hasScanDirs && !hasRepos && !useAllWatched) {
+    return collectGitContext({
+      repoPath,
+      projectName: opts.projectName,
+      since,
+      highlights: opts.highlights,
+      pitfalls: opts.pitfalls,
+      nextSteps: opts.nextSteps,
+    });
+  }
+
+  let maxDepth = 2;
+  if (opts.maxDepth !== undefined) {
+    const parsedDepth = Number(opts.maxDepth);
+    if (!Number.isInteger(parsedDepth) || parsedDepth < 0) {
+      throw new CliError(
+        `Invalid --max-depth "${opts.maxDepth}". Must be a non-negative integer.`,
+        'node src/cli.js generate --scan-dir ~/workspace --max-depth 2'
+      );
+    }
+    maxDepth = parsedDepth;
+  }
+
+  const scanDirs = [
+    ...(opts.scanDirs || []),
+    ...(useAllWatched ? normalizePathList(savedCfg.watchDirs) : []),
+  ];
+  const repos = [
+    ...(opts.repos || []),
+    ...(useAllWatched ? normalizePathList(savedCfg.watchRepos) : []),
+  ];
+
+  if (useAllWatched && scanDirs.length === 0 && repos.length === 0) {
+    throw new CliError(
+      'No watched directories or repositories configured for --all-watched.',
+      'node src/cli.js config set watchDirs ~/workspace (or config set watchRepos /path/to/repo1,/path/to/repo2)'
+    );
+  }
+
+  return collectMultiRepoContext({
+    scanDirs,
+    repos,
+    since,
+    maxDepth,
+    projectName: opts.projectName,
+    highlights: opts.highlights,
+    pitfalls: opts.pitfalls,
+    nextSteps: opts.nextSteps,
+  });
+}
+
 async function maybeEnrichContextWithAI({
   opts,
   savedCfg,
@@ -792,20 +887,13 @@ export async function main(argv = process.argv.slice(2)) {
       );
     }
     const since = opts.since || (period === 'weekly' ? '7 days ago' : '24 hours ago');
-    const rawContext = collectGitContext({
-      repoPath,
-      projectName: opts.projectName,
-      since,
-      highlights: opts.highlights,
-      pitfalls: opts.pitfalls,
-      nextSteps: opts.nextSteps,
-    });
+    const rawContext = collectCliContext(opts, savedCfg, { repoPath, since });
     const style = resolveCliStyle(opts.style, savedCfg.defaultStyle);
     const { context, title, aiSummary } = await maybeEnrichContextWithAI({
       opts,
       savedCfg,
       context: rawContext,
-      repoPath,
+      repoPath: rawContext.repoPath || repoPath,
       since,
       style,
       mode: 'report',
@@ -821,8 +909,25 @@ export async function main(argv = process.argv.slice(2)) {
       report,
       dryRun: opts.dryRun !== false,
     });
+    const multiRepoMeta = context.isMultiRepo
+      ? {
+          multiRepo: {
+            scannedRepoCount: context.scannedRepoCount,
+            activeRepoCount: context.activeRepoCount,
+            projects: (context.projects || []).map((p) => p.shortName),
+          },
+        }
+      : {};
     console.log(
-      JSON.stringify(aiSummary ? { ...result, aiSummary } : result, null, 2)
+      JSON.stringify(
+        {
+          ...result,
+          ...multiRepoMeta,
+          ...(aiSummary ? { aiSummary } : {}),
+        },
+        null,
+        2
+      )
     );
     return;
   }
@@ -859,20 +964,13 @@ export async function main(argv = process.argv.slice(2)) {
   if (command === 'generate' || command === 'publish-github') {
     const style = resolveCliStyle(opts.style, savedCfg.defaultStyle);
     const since = opts.since || '24 hours ago';
-    const rawContext = collectGitContext({
-      repoPath,
-      projectName: opts.projectName,
-      since,
-      highlights: opts.highlights,
-      pitfalls: opts.pitfalls,
-      nextSteps: opts.nextSteps,
-    });
+    const rawContext = collectCliContext(opts, savedCfg, { repoPath, since });
 
     const { context, title, aiSummary } = await maybeEnrichContextWithAI({
       opts,
       savedCfg,
       context: rawContext,
-      repoPath,
+      repoPath: rawContext.repoPath || repoPath,
       since,
       style,
       mode: 'devlog',
@@ -912,6 +1010,20 @@ export async function main(argv = process.argv.slice(2)) {
               branch: context.branch,
               commits: context.commits.length,
               stats: context.stats,
+              ...(context.isMultiRepo
+                ? {
+                    isMultiRepo: true,
+                    scannedRepoCount: context.scannedRepoCount,
+                    activeRepoCount: context.activeRepoCount,
+                    projects: (context.projects || []).map((p) => ({
+                      shortName: p.shortName,
+                      projectName: p.projectName,
+                      branch: p.branch,
+                      commits: p.commits.length,
+                      stats: p.stats,
+                    })),
+                  }
+                : {}),
               bundleDir,
               files,
               opened: Boolean(opts.open && openResult?.ok && !openResult?.skipped),
@@ -932,6 +1044,12 @@ export async function main(argv = process.argv.slice(2)) {
       console.log(
         `   Summary    : ${context.projectName} (${context.branch || 'main'}) · ${context.commits.length} commits · ${context.stats.filesChanged} files (+${context.stats.insertions}/-${context.stats.deletions})`
       );
+      if (context.isMultiRepo) {
+        const activeNames = (context.projects || []).map((p) => p.shortName).join(', ');
+        console.log(
+          `   Multi-Repo : ${context.activeRepoCount}/${context.scannedRepoCount} active${activeNames ? ` (${activeNames})` : ''}`
+        );
+      }
       console.log(`   - Preview UI : ${files.preview}`);
       console.log(`   - GitHub     : ${files.github}`);
       console.log(`   - 小红书     : ${files.xiaohongshu}`);

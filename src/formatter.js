@@ -4,6 +4,26 @@ function pickBulletPoints(context) {
   if (context.highlights?.length > 0) {
     return context.highlights;
   }
+  if (context.isMultiRepo && context.projects?.length > 0) {
+    const picked = [];
+    const maxTotal = 6;
+    let round = 0;
+    while (picked.length < maxTotal) {
+      let addedInRound = false;
+      for (const proj of context.projects) {
+        const commit = proj.commits?.[round];
+        if (commit) {
+          const name = proj.shortName || proj.projectName;
+          picked.push(`[${name}] ${commit.subject}`);
+          addedInRound = true;
+          if (picked.length >= maxTotal) break;
+        }
+      }
+      if (!addedInRound) break;
+      round += 1;
+    }
+    if (picked.length > 0) return picked;
+  }
   if (context.commits?.length > 0) {
     return context.commits.slice(0, 5).map((c) => c.subject);
   }
@@ -18,12 +38,26 @@ function formatDateCN(isoString) {
   return `${yyyy}.${mm}.${dd}`;
 }
 
-function buildTagList(baseTags, projectName) {
+function buildTagList(baseTags, projectName, projects = null) {
+  const tags = [...baseTags];
+  if (Array.isArray(projects) && projects.length > 0) {
+    const projectTags = projects
+      .slice(0, 2)
+      .map((p) => {
+        const raw = p.shortName || p.projectName || '';
+        const clean = raw.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '');
+        return clean ? `#${clean}` : '';
+      })
+      .filter(Boolean);
+    if (projectTags.length > 0) {
+      tags.unshift(...projectTags);
+      return [...new Set(tags)];
+    }
+  }
   const shortProject = projectName.includes('/')
     ? projectName.split('/').pop()
     : projectName;
   const cleanProject = shortProject.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '');
-  const tags = [...baseTags];
   if (cleanProject) tags.unshift(`#${cleanProject}`);
   return [...new Set(tags)];
 }
@@ -36,6 +70,8 @@ export function formatMultiPlatformDevlog(context, options = {}) {
   const dateStr = formatDateCN(context.collectedAt);
   const shortName = context.projectName.split('/').pop() || context.projectName;
   const theme = resolveStyle(options.style);
+  const isMultiRepo = Boolean(context.isMultiRepo && context.projects?.length > 0);
+  const projects = isMultiRepo ? context.projects : null;
 
   const title =
     options.title || `${theme.emoji} ${context.projectName} 更新日志 (${dateStr})`;
@@ -50,31 +86,55 @@ export function formatMultiPlatformDevlog(context, options = {}) {
       : `完成 ${points.length} 项核心更新`;
 
   // 1. GitHub (Release Notes / Changelog / DEVLOG.md)
+  const githubChangedLines = isMultiRepo
+    ? context.highlights?.length > 0
+      ? [
+          ...context.highlights.map((p) => `- ${p}`),
+          '',
+          '### 🧩 Projects',
+          ...context.projects.flatMap((proj) => [
+            `#### [${proj.shortName || proj.projectName}] (\`${proj.branch || 'main'}\` · ${proj.stats?.filesChanged || 0} files, +${proj.stats?.insertions || 0}/-${proj.stats?.deletions || 0})`,
+            ...(proj.commits || []).map((c) => `- ${c.subject}`),
+          ]),
+        ]
+      : context.projects.flatMap((proj) => [
+          `#### [${proj.shortName || proj.projectName}] (\`${proj.branch || 'main'}\` · ${proj.stats?.filesChanged || 0} files, +${proj.stats?.insertions || 0}/-${proj.stats?.deletions || 0})`,
+          ...(proj.commits || []).map((c) => `- ${c.subject}`),
+        ])
+    : points.map((p) => `- ${p}`);
+
+  const githubCommitsLines = isMultiRepo
+    ? context.projects.flatMap((proj) =>
+        (proj.commits || []).length > 0
+          ? [
+              `#### [${proj.shortName || proj.projectName}]`,
+              ...proj.commits.map((c) => `- \`${c.sha}\` ${c.subject} (${c.date})`),
+            ]
+          : []
+      )
+    : (context.commits || []).map((c) => `- \`${c.sha}\` ${c.subject} (${c.date})`);
+
   const githubBody = [
     `## ${title}`,
     '',
     theme.githubLead(context.branch || 'main', statsLine),
     '',
     '### ✨ What Changed',
-    ...points.map((p) => `- ${p}`),
+    ...githubChangedLines,
     ...(pitfalls.length > 0
       ? ['', '### 🫧 踩坑与修正', ...pitfalls.map((p) => `- ${p}`)]
       : []),
     ...(nextSteps.length > 0
       ? ['', '### 🧭 Next Up', ...nextSteps.map((p) => `- [ ] ${p}`)]
       : []),
-    ...(context.commits?.length > 0
-      ? [
-          '',
-          '### 📦 Commits',
-          ...context.commits.map((c) => `- \`${c.sha}\` ${c.subject} (${c.date})`),
-        ]
+    ...(githubCommitsLines.length > 0
+      ? ['', '### 📦 Commits', ...githubCommitsLines]
       : []),
   ].join('\n');
 
   // 2. Xiaohongshu (小红书图文更新日志)
   const xhsTitle = options.xhsTitle || theme.xhsTitle(shortName);
-  const xhsTags = buildTagList(theme.xhsTags, context.projectName);
+  const xhsTags = buildTagList(theme.xhsTags, context.projectName, projects);
   const xhsBody = [
     xhsTitle,
     '',
@@ -96,7 +156,7 @@ export function formatMultiPlatformDevlog(context, options = {}) {
 
   // 3. Bilibili (B站图文动态 + 60s 口播大纲)
   const biliTitle = theme.biliTitle(dateStr, shortName);
-  const biliTags = buildTagList(theme.biliTags, context.projectName);
+  const biliTags = buildTagList(theme.biliTags, context.projectName, projects);
   const biliDynamic = [
     biliTitle,
     '',
@@ -125,7 +185,7 @@ export function formatMultiPlatformDevlog(context, options = {}) {
 
   // 4. Douyin (抖音图文笔记 + 30s 快节奏口播)
   const douyinTitle = theme.douyinTitle(shortName, dateStr);
-  const douyinTags = buildTagList(theme.douyinTags, context.projectName);
+  const douyinTags = buildTagList(theme.douyinTags, context.projectName, projects);
   const douyinBody = [
     douyinTitle,
     '',
@@ -155,6 +215,13 @@ export function formatMultiPlatformDevlog(context, options = {}) {
       style: theme.id,
       styleName: theme.name,
       copyPrompt: theme.copyPrompt,
+      ...(isMultiRepo
+        ? {
+            isMultiRepo: true,
+            activeRepoCount: context.activeRepoCount ?? context.projects.length,
+            scannedRepoCount: context.scannedRepoCount ?? context.projects.length,
+          }
+        : {}),
     },
     platforms: {
       github: {
