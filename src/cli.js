@@ -15,7 +15,11 @@ import {
   publishGlobalPlatform,
   SUPPORTED_GLOBAL_PLATFORMS,
 } from './global-publisher.js';
-import { DRAFT_PLATFORMS, savePlatformDraft } from './draft-automation.js';
+import {
+  DRAFT_PLATFORMS,
+  inspectDraftAutomationEnvironment,
+  savePlatformDraft,
+} from './draft-automation.js';
 import {
   formatWorkReport,
   sendWorkReport,
@@ -517,23 +521,30 @@ async function runDoctor(opts, savedCfg) {
   });
 
   // 8. Playwright (optional)
+  const pwEnv = await inspectDraftAutomationEnvironment();
   let pwStatus = 'warn';
   let pwDetail = 'not installed (optional, needed for save-draft --execute)';
-  try {
-    const pw = await import('playwright');
-    if (pw?.chromium) {
-      pwStatus = 'ok';
-      pwDetail = 'installed (browser draft automation available)';
-    }
-  } catch {
-    // optional
+  let pwHint = pwEnv.installInstructions || 'npm install playwright && npx playwright install chromium';
+  if (pwEnv.ok) {
+    pwStatus = 'ok';
+    const pkgLabel = pwEnv.packageVersion
+      ? `${pwEnv.packageName}@${pwEnv.packageVersion}`
+      : pwEnv.packageName;
+    const revLabel = pwEnv.chromiumRevision ? `r${pwEnv.chromiumRevision}` : 'ready';
+    pwDetail = `${pkgLabel} (${pwEnv.moduleSource}) · Chromium ${revLabel} (${pwEnv.executablePath})`;
+    pwHint = '';
+  } else if (pwEnv.playwrightFound && !pwEnv.chromiumFound) {
+    const pkgLabel = pwEnv.packageVersion
+      ? `${pwEnv.packageName}@${pwEnv.packageVersion}`
+      : pwEnv.packageName;
+    pwDetail = `${pkgLabel} found (${pwEnv.moduleSource}), but no Chromium binary found (optional, needed for save-draft --execute)`;
   }
   checks.push({
     id: 'playwright',
     label: 'Playwright (optional)',
     status: pwStatus,
     detail: pwDetail,
-    hint: pwStatus === 'ok' ? '' : 'npm install playwright && npx playwright install chromium',
+    hint: pwHint,
   });
 
   // 9. Global overseas platform credentials (optional)
@@ -991,13 +1002,31 @@ export async function main(argv = process.argv.slice(2)) {
     if (!opts.bundleDir && !opts.json) {
       console.error(`ℹ️  Auto-selected latest bundle: ${bundleDir}`);
     }
+    const isExecute = opts.dryRun === false;
     const result = await savePlatformDraft({
       platform,
       bundleDir,
       profileDir: opts.profileDir || savedCfg.browserProfileDir || undefined,
-      dryRun: opts.dryRun !== false,
+      dryRun: !isExecute,
+      keepOpen: true,
+      onStatus: (msg) => {
+        console.error(msg);
+      },
     });
     console.log(JSON.stringify(result, null, 2));
+    if (!result.ok) {
+      if (result.instructions && !opts.json) {
+        console.error(`💡 Try: ${result.instructions}`);
+      }
+      process.exitCode = 1;
+      return;
+    }
+    if (isExecute && typeof result.waitForClose === 'function') {
+      console.error(
+        '🌐 Chromium left open with your draft loaded. Review & save/publish manually — close the browser window when done.'
+      );
+      await result.waitForClose();
+    }
     return;
   }
 
