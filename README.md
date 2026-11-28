@@ -24,12 +24,20 @@ node src/cli.js generate --open
 node src/cli.js doctor
 ```
 
-> 想要自定义亮点或切换风格？直接追加参数即可（支持简写别名 `fish` / `hakimi` / `gpt`）：
+> 想要切换到 **💼 办公专业版**（零二次元、极简商务工作日报）或切换 **✨ 社区二创版** 的 AI 娘画风（支持简写别名 `fish` / `hakimi` / `gpt`）：
 > ```bash
-> node src/cli.js generate --style gemini --highlight "完成 4 图轮播套图" --open
+> # 社区二创版（二次元工作日报图文，默认）
+> node src/cli.js generate --edition community --style gemini --highlight "完成 4 图轮播套图" --open
+>
+> # 办公专业版（极简商务 4 图日报简报，零二次元零玩梗，适合直接发工作群）
+> node src/cli.js generate --edition office --open
 > ```
 
 ---
+
+### 双版本模式（单仓双模式 · 工作台顶部一键切换）
+- **✨ 社区二创版（`--edition community`，默认）**：保留二次元文化与四大 AI 娘画风，以**工作日报图文（社区报）**形式输出亮色漫画 4 图轮播，适配小红书 / 抖音 / B站 / X。
+- **💼 办公专业版（`--edition office`，别名 `work` / `pro` / `办公`）**：零二次元、零玩梗，独立深蓝极简商务 4 图简报（KPI 仪表盘 + 今日交付 / 风险复盘 / 下一步行动项），直接适用于飞书 / 钉钉 / 企业微信 / Slack / LinkedIn 与团队汇报。
 
 ### 内置 4 套模型风格（文案 + 卡片配色与矢量徽章 + Q 版 AI 娘生图 Prompt 全链路联动）
 - `big_fat_fish`（默认，别名 `fish`）：🐳 **大肥鱼（DeepSeek）** — 弱小、可怜、但能吃，认真掏小本本科普

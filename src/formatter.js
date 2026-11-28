@@ -1,4 +1,4 @@
-import { resolveStyle } from './styles.js';
+import { resolveEdition, resolveStyle } from './styles.js';
 
 function pickBulletPoints(context) {
   if (context.highlights?.length > 0) {
@@ -156,6 +156,17 @@ const GLOBAL_STYLE_VOICES = {
       `A calm, deliberate engineering log for **${proj}**${repoNote} (${stats}), documenting not just what shipped, but the design trade-offs behind it.`,
     outroTone: 'Would genuinely value thoughtful perspectives on the trade-offs here.',
   },
+  office: {
+    xLead: (proj, stats) => `📋 ${proj} daily engineering brief (${stats}):`,
+    bskyLead: (proj, stats) => `📋 ${proj} progress summary (${stats}):`,
+    redditIntro: (proj, stats, repoNote) =>
+      `Daily engineering report for **${proj}**${repoNote} (${stats}), summarizing key deliverables, blockers resolved, and next milestones.`,
+    linkedinOpening: (proj, stats, repoNote) =>
+      `Engineering progress update for **${proj}**${repoNote} (${stats}). Key deliverables and takeaways from this cycle:`,
+    devtoIntro: (proj, stats, repoNote) =>
+      `Structured engineering progress brief for **${proj}**${repoNote} (${stats}), covering shipped work, risks addressed, and upcoming tasks.`,
+    outroTone: 'Feedback and technical discussion are welcome.',
+  },
 };
 
 function buildTagList(baseTags, projectName, projects = null) {
@@ -189,12 +200,18 @@ function buildTagList(baseTags, projectName, projects = null) {
 export function formatMultiPlatformDevlog(context, options = {}) {
   const dateStr = formatDateCN(context.collectedAt);
   const shortName = context.projectName.split('/').pop() || context.projectName;
-  const theme = resolveStyle(options.style);
+  const editionObj = resolveEdition(
+    options.edition || (options.style === 'office' ? 'office' : 'community')
+  );
+  const theme = resolveStyle(options.style, { edition: editionObj.id });
   const isMultiRepo = Boolean(context.isMultiRepo && context.projects?.length > 0);
   const projects = isMultiRepo ? context.projects : null;
 
   const title =
-    options.title || `${theme.emoji} ${context.projectName} 更新日志 (${dateStr})`;
+    options.title ||
+    (editionObj.id === 'office'
+      ? `📋 ${context.projectName} 工作日报 (${dateStr})`
+      : `${theme.emoji} ${context.projectName} 更新日志 (${dateStr})`);
 
   const points = pickBulletPoints(context);
   const pitfalls = context.pitfalls || [];
@@ -234,18 +251,20 @@ export function formatMultiPlatformDevlog(context, options = {}) {
       )
     : (context.commits || []).map((c) => `- \`${c.sha}\` ${c.subject} (${c.date})`);
 
+  const isOffice = editionObj.id === 'office';
+
   const githubBody = [
     `## ${title}`,
     '',
     theme.githubLead(context.branch || 'main', statsLine),
     '',
-    '### ✨ What Changed',
+    isOffice ? '### 📋 Summary of Changes' : '### ✨ What Changed',
     ...githubChangedLines,
     ...(pitfalls.length > 0
-      ? ['', '### 🫧 踩坑与修正', ...pitfalls.map((p) => `- ${p}`)]
+      ? ['', isOffice ? '### ⚠️ Risks & Resolutions' : '### 🫧 踩坑与修正', ...pitfalls.map((p) => `- ${p}`)]
       : []),
     ...(nextSteps.length > 0
-      ? ['', '### 🧭 Next Up', ...nextSteps.map((p) => `- [ ] ${p}`)]
+      ? ['', isOffice ? '### 📌 Next Actions' : '### 🧭 Next Up', ...nextSteps.map((p) => `- [ ] ${p}`)]
       : []),
     ...(githubCommitsLines.length > 0
       ? ['', '### 📦 Commits', ...githubCommitsLines]
@@ -260,10 +279,10 @@ export function formatMultiPlatformDevlog(context, options = {}) {
     '',
     theme.xhsOpening(shortName, statsLine),
     '',
-    '📌 本次更新：',
+    isOffice ? '📌 核心交付：' : '📌 本次更新：',
     ...points.map((p, i) => `${i + 1}. ${p}`),
     ...(pitfalls.length > 0
-      ? ['', '⚠️ 踩到的坑：', ...pitfalls.map((p) => `- ${p}`)]
+      ? ['', isOffice ? '⚠️ 风险与卡点：' : '⚠️ 踩到的坑：', ...pitfalls.map((p) => `- ${p}`)]
       : []),
     ...(nextSteps.length > 0
       ? ['', '🧭 下一步计划：', ...nextSteps.map((p) => `- ${p}`)]
@@ -283,25 +302,35 @@ export function formatMultiPlatformDevlog(context, options = {}) {
     theme.biliOpening(statsLine),
     ...points.map((p) => `${theme.bulletIcon} ${p}`),
     ...(pitfalls.length > 0
-      ? ['', '🔧 顺手填了几个坑：', ...pitfalls.map((p) => `• ${p}`)]
+      ? ['', isOffice ? '⚠️ 风险与处理：' : '🔧 顺手填了几个坑：', ...pitfalls.map((p) => `• ${p}`)]
       : []),
     ...(nextSteps.length > 0
-      ? ['', '🚀 下一站：', ...nextSteps.map((p) => `→ ${p}`)]
+      ? ['', isOffice ? '📌 下一步计划：' : '🚀 下一站：', ...nextSteps.map((p) => `→ ${p}`)]
       : []),
     '',
     theme.biliClosing,
     biliTags.join(' '),
   ].join('\n');
 
-  const biliVideoOutline = [
-    `【60秒口播大纲 · ${theme.name}｜${shortName}】`,
-    `0-5s 开场钩子：今天用 ${theme.name} 模式把 ${shortName} 推进了一版，直接看更新。`,
-    `5-35s 核心更新：${points.slice(0, 3).join('；')}。`,
-    pitfalls.length > 0
-      ? `35-50s 踩坑实录：中途卡在「${pitfalls[0]}」，最后这样解决的。`
-      : `35-50s 改动总览：这波总共${statsLine}。`,
-    `50-60s 互动收尾：想看「${nextSteps[0] || '下一版实机演示'}」的可以三连蹲一下！`,
-  ].join('\n');
+  const biliVideoOutline = isOffice
+    ? [
+        `【60秒汇报大纲 · ${theme.name}｜${shortName}】`,
+        `0-5s 概览：同步 ${shortName} 本周期研发进展（${statsLine}）。`,
+        `5-35s 核心交付：${points.slice(0, 3).join('；')}。`,
+        pitfalls.length > 0
+          ? `35-50s 风险与处理：重点解决了「${pitfalls[0]}」。`
+          : `35-50s 变更统计：本周期共${statsLine}。`,
+        `50-60s 下步计划：下一阶段将重点推进「${nextSteps[0] || '既定迭代排期'}」。`,
+      ].join('\n')
+    : [
+        `【60秒口播大纲 · ${theme.name}｜${shortName}】`,
+        `0-5s 开场钩子：今天用 ${theme.name} 模式把 ${shortName} 推进了一版，直接看更新。`,
+        `5-35s 核心更新：${points.slice(0, 3).join('；')}。`,
+        pitfalls.length > 0
+          ? `35-50s 踩坑实录：中途卡在「${pitfalls[0]}」，最后这样解决的。`
+          : `35-50s 改动总览：这波总共${statsLine}。`,
+        `50-60s 互动收尾：想看「${nextSteps[0] || '下一版实机演示'}」的可以三连蹲一下！`,
+      ].join('\n');
 
   // 4. Douyin (抖音图文笔记 + 30s 快节奏口播)
   const douyinTitle = theme.douyinTitle(shortName, dateStr);
@@ -310,7 +339,7 @@ export function formatMultiPlatformDevlog(context, options = {}) {
     douyinTitle,
     '',
     ...points.slice(0, 3).map((p) => `${theme.bulletIcon} ${p}`),
-    ...(pitfalls.length > 0 ? [`⚠️ 避坑：${pitfalls[0]}`] : []),
+    ...(pitfalls.length > 0 ? [`${isOffice ? '⚠️ 风险：' : '⚠️ 避坑：'}${pitfalls[0]}`] : []),
     '',
     `今日改动：${statsLine}`,
     theme.douyinClosing,
@@ -318,13 +347,23 @@ export function formatMultiPlatformDevlog(context, options = {}) {
     douyinTags.join(' '),
   ].join('\n');
 
-  const douyinScript = [
-    `【30秒快节奏口播 · ${theme.name}】`,
-    `今天把 ${shortName} 又推了一版：核心做了「${points[0]}」。`,
-    points[1] ? `顺手还搞定了「${points[1]}」。` : `总共${statsLine}。`,
-    `最折腾的坑是：${pitfalls[0] || '怎么把流程收口成真正好用的闭环'}。`,
-    `下期直接上实机演示，点个关注不迷路。`,
-  ].join('\n');
+  const douyinScript = isOffice
+    ? [
+        `【30秒进度速报 · ${theme.name}】`,
+        `同步 ${shortName} 今日研发进展：核心完成「${points[0]}」。`,
+        points[1] ? `同步推进了「${points[1]}」。` : `本周期共计${statsLine}。`,
+        pitfalls.length > 0
+          ? `重点风险处理：${pitfalls[0]}。`
+          : `当前无阻塞性风险。`,
+        `下一阶段计划：${nextSteps[0] || '按排期推进后续交付'}。`,
+      ].join('\n')
+    : [
+        `【30秒快节奏口播 · ${theme.name}】`,
+        `今天把 ${shortName} 又推了一版：核心做了「${points[0]}」。`,
+        points[1] ? `顺手还搞定了「${points[1]}」。` : `总共${statsLine}。`,
+        `最折腾的坑是：${pitfalls[0] || '怎么把流程收口成真正好用的闭环'}。`,
+        `下期直接上实机演示，点个关注不迷路。`,
+      ].join('\n');
 
   // 5-9. Overseas / Global Platforms (X, Reddit, LinkedIn, Bluesky, Dev.to)
   const dateIso = formatDateISO(context.collectedAt);
@@ -528,6 +567,8 @@ export function formatMultiPlatformDevlog(context, options = {}) {
       dateStr,
       projectName: context.projectName,
       statsLine,
+      edition: editionObj.id,
+      editionName: editionObj.name,
       style: theme.id,
       styleName: theme.name,
       copyPrompt: theme.copyPrompt,

@@ -154,6 +154,104 @@ export const MODEL_STYLES = {
 
 export const AVAILABLE_STYLES = Object.keys(MODEL_STYLES);
 
-export function resolveStyle(styleId = 'big_fat_fish') {
+export const EDITIONS = {
+  community: {
+    id: 'community',
+    name: '社区二创版',
+    shortName: '社区二创版',
+    emoji: '✨',
+    tagline: '二次元 AI 娘工作日报图文 · 社区报',
+    description: '保留四大 AI 娘二次元画风与亮色漫画 4 图轮播，以工作日报图文形式适配小红书 / 抖音 / B站 / X 等社区传播。',
+  },
+  office: {
+    id: 'office',
+    name: '办公专业版',
+    shortName: '办公专业版',
+    emoji: '💼',
+    tagline: '极简商务工作日报 · 团队汇报直发',
+    description: '零二次元、零玩梗的极简商务卡片与结构化日报文案，直接适用于飞书 / 钉钉 / 企微 / Slack / LinkedIn 与管理层汇报。',
+  },
+};
+
+export const AVAILABLE_EDITIONS = Object.keys(EDITIONS);
+
+export const EDITION_ALIASES = {
+  community: 'community',
+  acg: 'community',
+  anime: 'community',
+  social: 'community',
+  creator: 'community',
+  '社区': 'community',
+  '二创': 'community',
+  '社区版': 'community',
+  '社区二创版': 'community',
+  office: 'office',
+  work: 'office',
+  pro: 'office',
+  business: 'office',
+  corporate: 'office',
+  team: 'office',
+  '办公': 'office',
+  '办公版': 'office',
+  '办公专业版': 'office',
+};
+
+export function normalizeEditionId(input) {
+  if (typeof input !== 'string') return null;
+  const key = input.trim().toLowerCase();
+  if (!key) return null;
+  if (AVAILABLE_EDITIONS.includes(key)) return key;
+  return EDITION_ALIASES[key] || null;
+}
+
+export function resolveEdition(editionId = 'community') {
+  const normalized = normalizeEditionId(editionId) || 'community';
+  return EDITIONS[normalized] || EDITIONS.community;
+}
+
+export const OFFICE_STYLE = {
+  id: 'office',
+  edition: 'office',
+  name: '办公专业版（极简商务工作日报）',
+  emoji: '📋',
+  badgeLabel: '📋 工作日报简报',
+  subtitle: '清晰、克制、数据化 · 团队汇报与项目同步',
+  footerTag: '办公专业版 · 极简商务工作日报',
+  bgStops: ['#0F172A', '#1E293B', '#0F172A'],
+  accentFrom: '#2563EB',
+  accentTo: '#0EA5E9',
+  badgeTextColor: '#FFFFFF',
+  subtitleColor: '#94A3B8',
+  cardFill: 'rgba(37,99,235,0.08)',
+  cardStroke: 'rgba(148,163,184,0.32)',
+  statsFill: 'rgba(37,99,235,0.12)',
+  statsStroke: 'rgba(148,163,184,0.38)',
+  bulletIcon: '▸',
+  dotColor: '#2563EB',
+  textColor: '#F8FAFC',
+  githubLead: (branch, stats) =>
+    `> 📋 **工作日报 / 项目进度同步**：分支 \`${branch}\` · ${stats}`,
+  xhsTitle: (shortName) => `📋 ${shortName} 工作日报简报`,
+  xhsOpening: (shortName, stats) =>
+    `【项目进度同步】${shortName} 本周期完成以下核心交付（${stats}）：`,
+  xhsClosing:
+    '以上为本周期客观进度汇总与风险复盘，欢迎团队成员及协作者在评论区补充意见。',
+  xhsTags: ['#工作日报', '#项目进度', '#技术复盘', '#研发管理', '#BuildInPublic'],
+  biliTitle: (dateStr, shortName) => `【项目日报 ${dateStr}】${shortName} 迭代进度汇总`,
+  biliOpening: (stats) => `本周期研发进度概览（${stats}），核心交付事项如下：`,
+  biliClosing: '以上为本次迭代的结构化复盘，欢迎交流技术方案与优化建议。',
+  biliTags: ['#研发日报#', '#项目复盘#', '#工程实践#', '#开源项目#'],
+  douyinTitle: (shortName, dateStr) => `📋 ${shortName} 工作日报｜${dateStr}`,
+  douyinClosing: '本周期核心产出与风险复盘已整理完毕，欢迎同行交流。',
+  douyinTags: ['#工作日报', '#研发复盘', '#效率工具', '#程序员'],
+  copyPrompt:
+    '你现在以资深研发工程师/技术负责人的身份撰写正式、克制、客观的办公版工作日报与项目进度简报。不要使用二次元人设、网络热梗或卖萌口癖，突出可验证的交付结果、量化指标、阻塞风险与下一步行动项。',
+};
+
+export function resolveStyle(styleId = 'big_fat_fish', { edition } = {}) {
+  const normalizedEdition = edition ? normalizeEditionId(edition) : null;
+  if (normalizedEdition === 'office' || styleId === 'office') {
+    return OFFICE_STYLE;
+  }
   return MODEL_STYLES[styleId] || MODEL_STYLES.big_fat_fish;
 }

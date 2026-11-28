@@ -9,7 +9,13 @@ import {
   resolveDefaultMascotPath,
 } from './card-renderer.js';
 import { formatMultiPlatformDevlog } from './formatter.js';
-import { AVAILABLE_STYLES, MODEL_STYLES } from './styles.js';
+import {
+  AVAILABLE_EDITIONS,
+  AVAILABLE_STYLES,
+  EDITIONS,
+  MODEL_STYLES,
+  OFFICE_STYLE,
+} from './styles.js';
 import { formatWorkReport } from './work-report.js';
 import { buildAllPlatformImagePrompts } from './image-gen.js';
 
@@ -74,6 +80,21 @@ const WORKBENCH_THEMES = {
     dotColor: '#EA580C',
     shadow: 'rgba(59, 30, 14, 0.16)',
   },
+  office: {
+    shortName: '办公专业版',
+    pageBg: '#F8FAFC',
+    pageBgEnd: '#F1F5F9',
+    surface: '#FFFFFF',
+    surfaceSoft: '#EFF6FF',
+    ink: '#0F172A',
+    muted: '#475569',
+    accent: '#2563EB',
+    accentSoft: '#0EA5E9',
+    border: '#334155',
+    borderSubtle: '#CBD5E1',
+    dotColor: '#2563EB',
+    shadow: 'rgba(15, 23, 42, 0.10)',
+  },
 };
 
 function escapeHtml(str = '') {
@@ -88,81 +109,104 @@ function safeJsonForScript(obj) {
   return JSON.stringify(obj).replace(/</g, '\\u003c');
 }
 
+function buildVariantEntry(context, formatted, styleId, { heroImageDataUri, isOffice = false } = {}) {
+  const defaultMascotPath = !isOffice && !heroImageDataUri ? resolveDefaultMascotPath(styleId) : null;
+  const effectiveHero = isOffice
+    ? null
+    : heroImageDataUri || (defaultMascotPath ? fileToDataUri(defaultMascotPath) : null);
+  const isMascotCover = Boolean(!isOffice && !heroImageDataUri && defaultMascotPath);
+  const slides = renderCarouselSlidesSvg(context, formatted, {
+    heroImageDataUri: effectiveHero,
+    isMascotCover,
+  });
+  const wb = WORKBENCH_THEMES[styleId] || WORKBENCH_THEMES.big_fat_fish;
+  const styleDef = isOffice ? OFFICE_STYLE : MODEL_STYLES[styleId];
+  return {
+    id: styleId,
+    edition: isOffice ? 'office' : 'community',
+    name: styleDef.name,
+    shortName: wb.shortName,
+    subtitle: styleDef.subtitle,
+    emoji: styleDef.emoji,
+    accent: wb.accent,
+    bg: wb.pageBg,
+    theme: wb,
+    projectShort: context.projectName.split('/').pop() || context.projectName,
+    title: formatted.meta.title,
+    statsLine: formatted.meta.statsLine,
+    platforms: {
+      xiaohongshu: {
+        text: formatted.platforms.xiaohongshu.content,
+      },
+      bilibili: {
+        text: formatted.platforms.bilibili.content,
+        extra: formatted.platforms.bilibili.videoOutline,
+      },
+      douyin: {
+        text: formatted.platforms.douyin.content,
+        extra: formatted.platforms.douyin.videoScript,
+      },
+      github: {
+        text: formatted.platforms.github.content,
+      },
+      x: {
+        text: formatted.platforms.x.content,
+        extra: formatted.platforms.x.thread,
+        intentUrl: formatted.platforms.x.intentUrl,
+      },
+      bluesky: {
+        text: formatted.platforms.bluesky.content,
+        intentUrl: formatted.platforms.bluesky.intentUrl,
+      },
+      reddit: {
+        title: formatted.platforms.reddit.title,
+        text: formatted.platforms.reddit.content,
+        submitUrl: formatted.platforms.reddit.submitUrl,
+        suggestedSubreddits: formatted.platforms.reddit.suggestedSubreddits,
+      },
+      linkedin: {
+        title: formatted.platforms.linkedin.title,
+        text: formatted.platforms.linkedin.content,
+      },
+      devto: {
+        title: formatted.platforms.devto.title,
+        text: formatted.platforms.devto.content,
+      },
+    },
+    verticalSvg: renderVerticalCardSvg(context, formatted, {
+      heroImageDataUri: effectiveHero,
+      isMascotCover,
+    }),
+    horizontalSvg: renderHorizontalCardSvg(context, formatted, {
+      heroImageDataUri: isOffice ? null : heroImageDataUri,
+    }),
+    slides,
+    imagePrompts: buildAllPlatformImagePrompts(context, {
+      style: isOffice ? 'chatgpt' : styleId,
+    }),
+  };
+}
+
 function buildStyleVariants(context, defaultFormatted, { heroImageDataUri } = {}) {
   const variants = {};
   for (const styleId of AVAILABLE_STYLES) {
     const formatted =
-      styleId === defaultFormatted.meta.style
+      styleId === defaultFormatted.meta.style && defaultFormatted.meta.edition !== 'office'
         ? defaultFormatted
-        : formatMultiPlatformDevlog(context, { style: styleId });
-    const defaultMascotPath = !heroImageDataUri ? resolveDefaultMascotPath(styleId) : null;
-    const effectiveHero = heroImageDataUri || (defaultMascotPath ? fileToDataUri(defaultMascotPath) : null);
-    const isMascotCover = Boolean(!heroImageDataUri && defaultMascotPath);
-    const slides = renderCarouselSlidesSvg(context, formatted, {
-      heroImageDataUri: effectiveHero,
-      isMascotCover,
+        : formatMultiPlatformDevlog(context, { style: styleId, edition: 'community' });
+    variants[styleId] = buildVariantEntry(context, formatted, styleId, {
+      heroImageDataUri,
+      isOffice: false,
     });
-    const wb = WORKBENCH_THEMES[styleId] || WORKBENCH_THEMES.big_fat_fish;
-    variants[styleId] = {
-      id: styleId,
-      name: MODEL_STYLES[styleId].name,
-      shortName: wb.shortName,
-      subtitle: MODEL_STYLES[styleId].subtitle,
-      emoji: MODEL_STYLES[styleId].emoji,
-      accent: wb.accent,
-      bg: wb.pageBg,
-      theme: wb,
-      projectShort: context.projectName.split('/').pop() || context.projectName,
-      title: formatted.meta.title,
-      statsLine: formatted.meta.statsLine,
-      platforms: {
-        xiaohongshu: {
-          text: formatted.platforms.xiaohongshu.content,
-        },
-        bilibili: {
-          text: formatted.platforms.bilibili.content,
-          extra: formatted.platforms.bilibili.videoOutline,
-        },
-        douyin: {
-          text: formatted.platforms.douyin.content,
-          extra: formatted.platforms.douyin.videoScript,
-        },
-        github: {
-          text: formatted.platforms.github.content,
-        },
-        x: {
-          text: formatted.platforms.x.content,
-          extra: formatted.platforms.x.thread,
-          intentUrl: formatted.platforms.x.intentUrl,
-        },
-        bluesky: {
-          text: formatted.platforms.bluesky.content,
-          intentUrl: formatted.platforms.bluesky.intentUrl,
-        },
-        reddit: {
-          title: formatted.platforms.reddit.title,
-          text: formatted.platforms.reddit.content,
-          submitUrl: formatted.platforms.reddit.submitUrl,
-          suggestedSubreddits: formatted.platforms.reddit.suggestedSubreddits,
-        },
-        linkedin: {
-          title: formatted.platforms.linkedin.title,
-          text: formatted.platforms.linkedin.content,
-        },
-        devto: {
-          title: formatted.platforms.devto.title,
-          text: formatted.platforms.devto.content,
-        },
-      },
-      verticalSvg: renderVerticalCardSvg(context, formatted, {
-        heroImageDataUri: effectiveHero,
-        isMascotCover,
-      }),
-      horizontalSvg: renderHorizontalCardSvg(context, formatted, { heroImageDataUri }),
-      slides,
-      imagePrompts: buildAllPlatformImagePrompts(context, { style: styleId }),
-    };
   }
+  const officeFormatted =
+    defaultFormatted.meta.edition === 'office' || defaultFormatted.meta.style === 'office'
+      ? defaultFormatted
+      : formatMultiPlatformDevlog(context, { style: 'office', edition: 'office' });
+  variants.office = buildVariantEntry(context, officeFormatted, 'office', {
+    heroImageDataUri: null,
+    isOffice: true,
+  });
   return variants;
 }
 
@@ -1117,6 +1161,39 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
+    .edition-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-soft);
+      border: 2px solid var(--border);
+      border-radius: 999px;
+      padding: 4px;
+    }
+
+    .edition-btn {
+      border: none;
+      background: transparent;
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .edition-btn.active {
+      background: var(--accent);
+      color: #FFFFFF;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.16);
+    }
+
+    .switcher.is-hidden,
+    .community-only.is-hidden {
+      display: none;
+    }
+
     @media (max-width: 960px) {
       .visuals-hero {
         grid-template-columns: 1fr;
@@ -1168,10 +1245,17 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
           <div class="subtitle-line" id="page-subtitle">${escapeHtml(initial.name)} · ${escapeHtml(initial.subtitle)}</div>
         </div>
 
-        <nav class="switcher" aria-label="模型风格实时切换">
-          <span class="switcher-label">AI 娘换肤：</span>
-          ${switcherButtons}
-        </nav>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <nav class="edition-switcher" aria-label="版本模式切换">
+            <button type="button" class="edition-btn${initial.edition !== 'office' ? ' active' : ''}" data-edition="community" onclick="switchEdition('community')">✨ 社区二创版</button>
+            <button type="button" class="edition-btn${initial.edition === 'office' ? ' active' : ''}" data-edition="office" onclick="switchEdition('office')">💼 办公专业版</button>
+          </nav>
+
+          <nav class="switcher${initial.edition === 'office' ? ' is-hidden' : ''}" id="community-style-switcher" aria-label="模型风格实时切换">
+            <span class="switcher-label">AI 娘换肤：</span>
+            ${switcherButtons}
+          </nav>
+        </div>
       </div>
 
       <nav class="tabs" role="tablist" aria-label="创作工作台分页">
@@ -1190,15 +1274,15 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
     <section class="tab-section" data-section="visuals">
       <div class="section-banner">
         <div>
-          <h2>🖼️ 小红书 / 抖音 4 图轮播套图</h2>
-          <div class="section-sub">P1 AI 娘封面 → P2 核心更新 → P3 踩坑与改动速览 → P4 预告互动，亮色漫画风格一镜到底</div>
+          <h2 id="visuals-banner-title">${initial.edition === 'office' ? '💼 办公专业版 · 极简商务工作日报 4 图简报' : '🖼️ 社区二创版 · 工作日报图文 4 图轮播'}</h2>
+          <div class="section-sub" id="visuals-banner-sub">${initial.edition === 'office' ? '零二次元、零玩梗：P1 数据封面 → P2 今日产出 → P3 风险复盘 → P4 明日计划，可直接发工作群' : '保留二次元 AI 娘文化：P1 AI 娘封面 → P2 核心更新 → P3 踩坑与改动速览 → P4 预告互动，亮色漫画风格一镜到底'}</div>
         </div>
         <div class="actions">
-          <label class="file-label" title="上传自定义 AI 底图替换封面">
+          <label class="file-label community-only${initial.edition === 'office' ? ' is-hidden' : ''}" title="上传自定义 AI 底图替换封面">
             🖼️ 叠加 AI 底图
             <input id="hero-file-input" type="file" accept="image/*" style="display:none" onchange="applyLocalHero(event)" />
           </label>
-          <button type="button" class="btn-secondary" id="btn-reset-hero" onclick="resetLocalHero()">恢复默认 AI 娘</button>
+          <button type="button" class="btn-secondary community-only${initial.edition === 'office' ? ' is-hidden' : ''}" id="btn-reset-hero" onclick="resetLocalHero()">恢复默认 AI 娘</button>
           <button type="button" class="btn-primary" id="btn-export-all" onclick="exportAllSlidesPng(this)">📦 一键导出 4 图 PNG</button>
         </div>
       </div>
@@ -1270,8 +1354,8 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
           <div class="panel-head">
             <h3>3:4 竖版封面卡（小红书 / 抖音）</h3>
             <div class="actions">
-              <label class="file-label">叠加 AI 底图<input id="hero-file-input-alt" type="file" accept="image/*" style="display:none" onchange="applyLocalHero(event)"/></label>
-              <button type="button" class="btn-secondary" onclick="resetLocalHero()">恢复默认 AI 娘</button>
+              <label class="file-label community-only${initial.edition === 'office' ? ' is-hidden' : ''}">叠加 AI 底图<input id="hero-file-input-alt" type="file" accept="image/*" style="display:none" onchange="applyLocalHero(event)"/></label>
+              <button type="button" class="btn-secondary community-only${initial.edition === 'office' ? ' is-hidden' : ''}" onclick="resetLocalHero()">恢复默认 AI 娘</button>
               <button type="button" class="btn-primary" onclick="downloadPng('svg-vertical', 'vertical', 1080, 1440)">导出 PNG</button>
             </div>
           </div>
@@ -1400,6 +1484,8 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
     window.__MASCOT_DATA_URIS__ = ${safeJsonForScript(mascotDataUris)};
     window.__DEVLOG_VARIANTS__ = ${safeJsonForScript(previewVariants)};
     window.__CURRENT_STYLE__ = ${JSON.stringify(initial.id)};
+    window.__CURRENT_EDITION__ = ${JSON.stringify(initial.edition || 'community')};
+    window.__LAST_COMMUNITY_STYLE__ = ${JSON.stringify(initial.edition === 'office' ? 'big_fat_fish' : initial.id)};
     window.__CURRENT_TAB__ = 'visuals';
     window.__PHONE_SLIDE_INDEX__ = 0;
     window.__CUSTOM_HERO_URI__ = null;
@@ -1704,10 +1790,50 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       }
     }
 
+    function syncEditionUi(editionId) {
+      const isOffice = editionId === 'office';
+      window.__CURRENT_EDITION__ = isOffice ? 'office' : 'community';
+      document.querySelectorAll('.edition-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.edition === window.__CURRENT_EDITION__);
+      });
+      const skinBar = document.getElementById('community-style-switcher');
+      if (skinBar) skinBar.classList.toggle('is-hidden', isOffice);
+      document.querySelectorAll('.community-only').forEach((el) => {
+        el.classList.toggle('is-hidden', isOffice);
+      });
+      const bannerTitle = document.getElementById('visuals-banner-title');
+      const bannerSub = document.getElementById('visuals-banner-sub');
+      if (bannerTitle) {
+        bannerTitle.textContent = isOffice
+          ? '💼 办公专业版 · 极简商务工作日报 4 图简报'
+          : '🖼️ 社区二创版 · 工作日报图文 4 图轮播';
+      }
+      if (bannerSub) {
+        bannerSub.textContent = isOffice
+          ? '零二次元、零玩梗：P1 数据封面 → P2 今日产出 → P3 风险复盘 → P4 明日计划，可直接发工作群'
+          : '保留二次元 AI 娘文化：P1 AI 娘封面 → P2 核心更新 → P3 踩坑与改动速览 → P4 预告互动，亮色漫画风格一镜到底';
+      }
+    }
+
+    function switchEdition(editionId) {
+      if (editionId === 'office') {
+        syncEditionUi('office');
+        switchStyle('office');
+        return;
+      }
+      syncEditionUi('community');
+      const target = window.__LAST_COMMUNITY_STYLE__ || 'big_fat_fish';
+      switchStyle(target === 'office' ? 'big_fat_fish' : target);
+    }
+
     function switchStyle(styleId) {
       const v = window.__DEVLOG_VARIANTS__[styleId];
       if (!v) return;
       window.__CURRENT_STYLE__ = styleId;
+      if (styleId !== 'office') {
+        window.__LAST_COMMUNITY_STYLE__ = styleId;
+      }
+      syncEditionUi(v.edition === 'office' ? 'office' : 'community');
       applyThemeTokens(v.theme);
       document.getElementById('page-title').textContent = v.title;
       document.getElementById('page-meta').textContent = v.statsLine;
@@ -1747,9 +1873,11 @@ function buildPreviewHtml(defaultStyleId, variants, workReport) {
       v.slides.forEach((slide, idx) => {
         const box = document.getElementById('svg-slide-' + idx);
         if (box) box.innerHTML = slide.svg;
+        const cardHeading = document.querySelector('#slide-card-' + idx + ' h3');
+        if (cardHeading && slide.label) cardHeading.textContent = slide.label;
       });
       hydrateMascotImages(document.getElementById('workspace'));
-      if (window.__CUSTOM_HERO_URI__) {
+      if (window.__CUSTOM_HERO_URI__ && styleId !== 'office') {
         patchHeroOnContainer('svg-vertical', window.__CUSTOM_HERO_URI__);
         patchHeroOnContainer('svg-slide-0', window.__CUSTOM_HERO_URI__);
       }
@@ -1985,7 +2113,12 @@ export function writeDevlogBundle(
   const heroImageDataUri = heroImagePath ? fileToDataUri(heroImagePath) : null;
   const variants = buildStyleVariants(context, formatted, { heroImageDataUri });
   const workReport = formatWorkReport(context, { period: 'daily' });
-  const activeStyle = formatted.meta.style || 'big_fat_fish';
+  const activeEdition =
+    formatted.meta.edition === 'office' || formatted.meta.style === 'office'
+      ? 'office'
+      : 'community';
+  const activeStyle =
+    activeEdition === 'office' ? 'office' : formatted.meta.style || 'big_fat_fish';
   const verticalSvg = variants[activeStyle].verticalSvg;
   const horizontalSvg = variants[activeStyle].horizontalSvg;
   const slides = variants[activeStyle].slides;
@@ -2059,7 +2192,15 @@ export function writeDevlogBundle(
   writeFileSync(
     files.manifest,
     JSON.stringify(
-      { context, formatted, workReport, files, availableStyles: AVAILABLE_STYLES },
+      {
+        context,
+        formatted,
+        workReport,
+        files,
+        edition: activeEdition,
+        availableEditions: AVAILABLE_EDITIONS,
+        availableStyles: AVAILABLE_STYLES,
+      },
       null,
       2
     ) + '\n',

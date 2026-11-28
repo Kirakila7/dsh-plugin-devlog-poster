@@ -74,6 +74,7 @@ Run `generate --open` with your distilled bullets:
 ```
 
 Useful optional flags:
+- `--edition <id>`: `community` (default, 二次元工作日报图文 / 社区二创版) or `office` (极简商务办公专业版，零二次元零玩梗; aliases: `work`, `pro`, `acg`, `办公`, `社区`)
 - `--repo <path>`: target repository path (defaults to current working directory)
 - `--scan-dir <path>`: scan a parent directory for active git repos in `--since` (repeatable or comma-separated)
 - `--repos <paths>`: explicitly aggregate multiple git repo paths (repeatable or comma-separated)

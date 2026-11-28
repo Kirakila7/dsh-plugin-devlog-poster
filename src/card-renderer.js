@@ -401,6 +401,373 @@ function renderComicDecorations(comic, uid) {
   </g>`;
 }
 
+function isOfficeMode(formatted) {
+  return formatted?.meta?.edition === 'office' || formatted?.meta?.style === 'office';
+}
+
+function formatCompactMetric(value, prefix = '') {
+  const num = Number(value) || 0;
+  const abs = Math.abs(num);
+  if (abs >= 1_000_000) return `${prefix}${(abs / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (abs >= 10_000) return `${prefix}${(abs / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return `${prefix}${abs}`;
+}
+
+function renderOfficeSlideShell({
+  uid,
+  pageIndex,
+  pageTag,
+  heading,
+  subtitle,
+  bodySvg,
+  footer,
+  rightCue = 'WORK DAILY',
+}) {
+  const safePageTag = escapeXml(pageTag);
+  const safeHeading = escapeXml(truncateByDisplayWidth(heading, 24));
+  const safeSubtitle = subtitle ? escapeXml(truncateByDisplayWidth(subtitle, 46)) : '';
+  const safeFooter = escapeXml(truncateByDisplayWidth(footer, 58));
+  const safeCue = escapeXml(rightCue);
+
+  const pagerDots = Array.from({ length: 4 }, (_, i) => {
+    const cx = 860 + i * 32;
+    return i === pageIndex
+      ? `<rect x="${cx - 12}" y="96" width="32" height="10" rx="5" fill="#2563EB"/>`
+      : `<circle cx="${cx + 4}" cy="101" r="5" fill="#CBD5E1"/>`;
+  }).join('');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440" data-office-slide="${pageIndex + 1}">
+  <defs>
+    <linearGradient id="officeBg_${uid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#F1F5F9"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Minimalist executive daily-report canvas (zero anime / zero comic clutter) -->
+  <rect width="1080" height="1440" fill="url(#officeBg_${uid})"/>
+  <rect x="0" y="0" width="1080" height="14" fill="#0F172A"/>
+  <rect x="0" y="0" width="340" height="14" fill="#2563EB"/>
+
+  <!-- Header badge & clean pager -->
+  <rect x="76" y="76" width="268" height="46" rx="10" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="2"/>
+  <text x="100" y="107" fill="#1D4ED8" font-size="22" font-weight="800" font-family="${FONT_STACK}">${safePageTag}</text>
+  <g aria-label="office-pager">${pagerDots}</g>
+
+  <!-- Clean executive typography -->
+  <text x="76" y="212" fill="#0F172A" font-size="52" font-weight="900" font-family="${FONT_STACK}">${safeHeading}</text>
+  ${
+    safeSubtitle
+      ? `<text x="76" y="264" fill="#475569" font-size="25" font-weight="500" font-family="${FONT_STACK}">${safeSubtitle}</text>`
+      : ''
+  }
+  <line x1="76" y1="296" x2="1004" y2="296" stroke="#E2E8F0" stroke-width="2"/>
+
+  ${bodySvg}
+
+  <!-- Structured executive footer -->
+  <line x1="76" y1="1328" x2="1004" y2="1328" stroke="#CBD5E1" stroke-width="1.5"/>
+  <text x="76" y="1380" fill="#64748B" font-size="22" font-weight="600" font-family="${FONT_STACK}">${safeFooter}</text>
+  <text x="1004" y="1380" text-anchor="end" fill="#2563EB" font-size="21" font-weight="800" font-family="${MONO_STACK}">${safeCue}</text>
+</svg>
+`;
+}
+
+function renderOfficeVerticalCardSvg(context, formatted) {
+  const rawProject = context.projectName.split('/').pop() || context.projectName;
+  const project = escapeXml(truncateByDisplayWidth(rawProject, 24));
+  const repoFull = escapeXml(truncateByDisplayWidth(context.projectName, 44));
+  const dateStr = escapeXml(formatted.meta.dateStr);
+  const branch = escapeXml(truncateByDisplayWidth(context.branch || 'main', 22));
+  const commitsCount = context.commits?.length || 0;
+  const { filesChanged = 0, insertions = 0, deletions = 0 } = context.stats || {};
+  const bullets = (context.highlights?.length > 0
+    ? context.highlights
+    : context.commits?.map((c) => c.subject) || ['完成本周期核心开发与验证工作']
+  ).slice(0, 4);
+
+  const kpis = [
+    { label: 'COMMITS', value: formatCompactMetric(commitsCount), color: '#0F172A' },
+    { label: 'FILES', value: formatCompactMetric(filesChanged), color: '#2563EB' },
+    { label: 'ADDED', value: formatCompactMetric(insertions, '+'), color: '#059669' },
+    { label: 'REMOVED', value: formatCompactMetric(deletions, '-'), color: '#DC2626' },
+  ];
+
+  const kpiSvg = kpis
+    .map((kpi, idx) => {
+      const x = 76 + idx * 238;
+      const valFontSize = kpi.value.length > 6 ? 32 : 40;
+      return `
+  <rect x="${x}" y="470" width="214" height="134" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="${x + 24}" y="514" fill="#64748B" font-size="18" font-weight="700" font-family="${MONO_STACK}">${kpi.label}</text>
+  <text x="${x + 24}" y="574" fill="${kpi.color}" font-size="${valFontSize}" font-weight="900" font-family="${MONO_STACK}">${escapeXml(kpi.value)}</text>`;
+    })
+    .join('\n');
+
+  const bulletSvg = bullets
+    .map((item, idx) => {
+      const y = 696 + idx * 142;
+      const lines = wrapTextClamped(item, 42, 2);
+      return `
+  <rect x="76" y="${y}" width="928" height="122" rx="16" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="76" y="${y}" width="10" height="122" rx="5" fill="#2563EB"/>
+  <text x="112" y="${y + (lines.length > 1 ? 52 : 70)}" fill="#0F172A" font-size="29" font-weight="700" font-family="${FONT_STACK}">${escapeXml(lines[0] || '')}</text>
+  ${lines[1] ? `<text x="112" y="${y + 94}" fill="#334155" font-size="27" font-weight="500" font-family="${FONT_STACK}">${escapeXml(lines[1])}</text>` : ''}`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1440" viewBox="0 0 1080 1440" data-office-slide="1">
+  <defs>
+    <linearGradient id="officeCoverBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#EFF6FF"/>
+    </linearGradient>
+    <linearGradient id="officeHeroBand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#1E293B"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1080" height="1440" fill="url(#officeCoverBg)"/>
+
+  <!-- Executive Dark Navy Header Band -->
+  <rect x="0" y="0" width="1080" height="422" fill="url(#officeHeroBand)"/>
+  <rect x="0" y="414" width="1080" height="8" fill="#2563EB"/>
+
+  <rect x="76" y="72" width="296" height="46" rx="10" fill="rgba(37,99,235,0.24)" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="100" y="103" fill="#93C5FD" font-size="21" font-weight="800" font-family="${MONO_STACK}">WORK DAILY BRIEF · P1/4</text>
+  <text x="1004" y="103" text-anchor="end" fill="#94A3B8" font-size="23" font-weight="700" font-family="${MONO_STACK}">${dateStr}</text>
+
+  <text x="76" y="218" fill="#FFFFFF" font-size="60" font-weight="900" font-family="${FONT_STACK}">${project}</text>
+  <text x="76" y="278" fill="#CBD5E1" font-size="28" font-weight="500" font-family="${FONT_STACK}">工程研发工作日报 · 项目进度与交付摘要</text>
+
+  <rect x="76" y="324" width="440" height="48" rx="10" fill="rgba(255,255,255,0.08)" stroke="rgba(148,163,184,0.35)" stroke-width="1.5"/>
+  <text x="98" y="356" fill="#E2E8F0" font-size="21" font-weight="600" font-family="${MONO_STACK}">branch: ${branch}</text>
+
+  <!-- 4 KPI Metric Cards -->
+  ${kpiSvg}
+
+  <text x="76" y="662" fill="#475569" font-size="22" font-weight="800" font-family="${FONT_STACK}">📌 本周期核心交付摘要</text>
+  ${bulletSvg}
+
+  <line x1="76" y1="1328" x2="1004" y2="1328" stroke="#CBD5E1" stroke-width="1.5"/>
+  <text x="76" y="1380" fill="#64748B" font-size="22" font-weight="600" font-family="${FONT_STACK}">办公专业版 · ${repoFull}</text>
+  <text x="1004" y="1380" text-anchor="end" fill="#2563EB" font-size="21" font-weight="800" font-family="${MONO_STACK}">01 / 04 →</text>
+</svg>
+`;
+}
+
+function renderOfficeHorizontalCardSvg(context, formatted) {
+  const project = escapeXml(truncateByDisplayWidth(context.projectName, 38));
+  const dateStr = escapeXml(formatted.meta.dateStr);
+  const branch = escapeXml(truncateByDisplayWidth(context.branch || 'main', 22));
+  const statsLine = escapeXml(truncateByDisplayWidth(formatted.meta.statsLine, 56));
+  const bullets = (context.highlights?.length > 0
+    ? context.highlights
+    : context.commits?.map((c) => c.subject) || ['完成本周期核心开发与验证工作']
+  ).slice(0, 4);
+
+  const itemsSvg = bullets
+    .map((item, idx) => {
+      const y = 332 + idx * 112;
+      const line = escapeXml(truncateByDisplayWidth(item, 68));
+      return `
+  <rect x="88" y="${y}" width="1424" height="90" rx="14" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="88" y="${y}" width="10" height="90" rx="5" fill="#2563EB"/>
+  <rect x="120" y="${y + 22}" width="58" height="46" rx="10" fill="#EFF6FF"/>
+  <text x="149" y="${y + 53}" text-anchor="middle" fill="#1D4ED8" font-size="23" font-weight="900" font-family="${MONO_STACK}">0${idx + 1}</text>
+  <text x="202" y="${y + 55}" fill="#0F172A" font-size="29" font-weight="600" font-family="${FONT_STACK}">${line}</text>`;
+    })
+    .join('\n');
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" data-office-horizontal="1">
+  <rect width="1600" height="900" fill="#F8FAFC"/>
+  <rect x="0" y="0" width="1600" height="278" fill="#0F172A"/>
+  <rect x="0" y="272" width="1600" height="6" fill="#2563EB"/>
+
+  <rect x="88" y="48" width="360" height="44" rx="10" fill="rgba(37,99,235,0.24)" stroke="#3B82F6" stroke-width="1.5"/>
+  <text x="112" y="77" fill="#93C5FD" font-size="21" font-weight="800" font-family="${MONO_STACK}">WORK DAILY BRIEF · ${dateStr}</text>
+  <text x="1512" y="77" text-anchor="end" fill="#94A3B8" font-size="22" font-weight="700" font-family="${MONO_STACK}">branch: ${branch}</text>
+
+  <text x="88" y="172" fill="#FFFFFF" font-size="56" font-weight="900" font-family="${FONT_STACK}">${project}</text>
+  <text x="88" y="232" fill="#CBD5E1" font-size="27" font-weight="600" font-family="${FONT_STACK}">${statsLine}</text>
+
+  ${itemsSvg}
+
+  <line x1="88" y1="812" x2="1512" y2="812" stroke="#CBD5E1" stroke-width="1.5"/>
+  <text x="88" y="856" fill="#64748B" font-size="23" font-weight="600" font-family="${FONT_STACK}">dsh-plugin-devlog-poster · 办公专业版 · 极简商务工作日报</text>
+  <text x="1512" y="856" text-anchor="end" fill="#2563EB" font-size="21" font-weight="800" font-family="${MONO_STACK}">16:9 WORK BRIEF</text>
+</svg>
+`;
+}
+
+function renderOfficeCarouselSlidesSvg(context, formatted) {
+  const project = context.projectName.split('/').pop() || context.projectName;
+  const footer = `办公专业版 · ${project} · ${formatted.meta.dateStr}`;
+  const points = (context.highlights?.length > 0
+    ? context.highlights
+    : context.commits?.map((c) => c.subject) || ['完成本周期核心开发与验证工作']
+  ).slice(0, 5);
+  const pitfalls =
+    context.pitfalls?.length > 0
+      ? context.pitfalls
+      : ['当前无阻塞性风险，各项变更已按计划验证'];
+  const nextSteps =
+    context.nextSteps?.length > 0 ? context.nextSteps : ['按迭代排期推进下一阶段交付'];
+
+  const slide1 = renderOfficeVerticalCardSvg(context, formatted);
+
+  // P2 Deliverables
+  const p2Count = points.length;
+  const p2CardH = p2Count <= 3 ? 214 : p2Count === 4 ? 192 : 162;
+  const p2Gap = p2Count <= 3 ? 32 : p2Count === 4 ? 24 : 20;
+  const p2MaxLines = p2Count <= 3 ? 3 : 2;
+  const p2StartY = 336;
+
+  const p2Body = points
+    .map((item, idx) => {
+      const y = p2StartY + idx * (p2CardH + p2Gap);
+      const lines = wrapTextClamped(item, 40, p2MaxLines);
+      return `
+  <rect x="76" y="${y}" width="928" height="${p2CardH}" rx="18" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="76" y="${y}" width="10" height="${p2CardH}" rx="5" fill="#2563EB"/>
+  <rect x="112" y="${y + 24}" width="128" height="34" rx="8" fill="#EFF6FF"/>
+  <text x="176" y="${y + 47}" text-anchor="middle" fill="#1D4ED8" font-size="19" font-weight="800" font-family="${MONO_STACK}">ITEM 0${idx + 1}</text>
+  ${lines
+    .map(
+      (l, li) =>
+        `<text x="112" y="${y + 98 + li * 40}" fill="#0F172A" font-size="30" font-weight="700" font-family="${FONT_STACK}">${escapeXml(l)}</text>`
+    )
+    .join('\n')}`;
+    })
+    .join('\n');
+
+  const slide2 = renderOfficeSlideShell({
+    uid: 'office_p2',
+    pageIndex: 1,
+    pageTag: 'P2 / 4 · 今日产出',
+    heading: '今日核心交付清单',
+    subtitle: `${formatted.meta.statsLine} · 共 ${points.length} 项重点`,
+    bodySvg: p2Body,
+    footer,
+    rightCue: '02 / 04 →',
+  });
+
+  // P3 Risks & Changed Files Summary
+  const visiblePitfalls = pitfalls.slice(0, 3);
+  const p3CardH = visiblePitfalls.length === 1 ? 248 : visiblePitfalls.length === 2 ? 210 : 198;
+  const p3Gap = 26;
+  const p3StartY = 336;
+
+  const p3Risks = visiblePitfalls
+    .map((p, idx) => {
+      const y = p3StartY + idx * (p3CardH + p3Gap);
+      const lines = wrapTextClamped(p, 40, visiblePitfalls.length === 1 ? 4 : 3);
+      return `
+  <rect x="76" y="${y}" width="928" height="${p3CardH}" rx="18" fill="#FFFBEB" stroke="#FDE68A" stroke-width="2"/>
+  <rect x="76" y="${y}" width="10" height="${p3CardH}" rx="5" fill="#D97706"/>
+  <rect x="112" y="${y + 24}" width="184" height="34" rx="8" fill="#FEF3C7"/>
+  <text x="204" y="${y + 47}" text-anchor="middle" fill="#B45309" font-size="19" font-weight="800" font-family="${FONT_STACK}">风险与复盘 #${idx + 1}</text>
+  ${lines
+    .map(
+      (l, li) =>
+        `<text x="112" y="${y + 98 + li * 40}" fill="#0F172A" font-size="30" font-weight="600" font-family="${FONT_STACK}">${escapeXml(l)}</text>`
+    )
+    .join('\n')}`;
+    })
+    .join('\n');
+
+  let p3Snapshot = '';
+  if (visiblePitfalls.length <= 2) {
+    const snapY = p3StartY + visiblePitfalls.length * (p3CardH + p3Gap) + 12;
+    const snapH = Math.min(340, 1286 - snapY);
+    const changedFiles = (context.changedFiles || []).slice(0, 4);
+    const filePills = changedFiles
+      .map((f, idx) => {
+        const row = Math.floor(idx / 2);
+        const col = idx % 2;
+        const px = 112 + col * 432;
+        const py = snapY + 150 + row * 64;
+        const label = escapeXml(truncateByDisplayWidth(f, 30));
+        return `
+    <rect x="${px}" y="${py}" width="414" height="48" rx="10" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1.5"/>
+    <text x="${px + 18}" y="${py + 31}" fill="#334155" font-size="20" font-weight="600" font-family="${MONO_STACK}">${label}</text>`;
+      })
+      .join('\n');
+
+    p3Snapshot = `
+  <rect x="76" y="${snapY}" width="928" height="${snapH}" rx="18" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <text x="112" y="${snapY + 52}" fill="#0F172A" font-size="26" font-weight="800" font-family="${FONT_STACK}">📊 本轮代码变更速览</text>
+  <text x="112" y="${snapY + 104}" fill="#2563EB" font-size="24" font-weight="700" font-family="${FONT_STACK}">${escapeXml(truncateByDisplayWidth(`${context.branch || 'main'} · ${formatted.meta.statsLine}`, 44))}</text>
+  ${filePills}`;
+  }
+
+  const slide3 = renderOfficeSlideShell({
+    uid: 'office_p3',
+    pageIndex: 2,
+    pageTag: 'P3 / 4 · 风险复盘',
+    heading: '风险、卡点与变更范围',
+    subtitle: '记录工程决策与阻塞项，方便团队快速对齐上下文',
+    bodySvg: `${p3Risks}\n${p3Snapshot}`,
+    footer,
+    rightCue: '03 / 04 →',
+  });
+
+  // P4 Next Actions & Clean Executive Summary Box (no anime / no comment-bait)
+  const visibleNext = nextSteps.slice(0, 3);
+  const p4CardH = 148;
+  const p4Gap = 24;
+  const p4StartY = 336;
+
+  const p4Next = visibleNext
+    .map((n, idx) => {
+      const y = p4StartY + idx * (p4CardH + p4Gap);
+      const lines = wrapTextClamped(n, 38, 2);
+      return `
+  <rect x="76" y="${y}" width="928" height="${p4CardH}" rx="18" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="2"/>
+  <rect x="112" y="${y + 46}" width="52" height="52" rx="12" fill="#EFF6FF" stroke="#BFDBFE" stroke-width="2"/>
+  <text x="138" y="${y + 81}" text-anchor="middle" fill="#1D4ED8" font-size="24" font-weight="900" font-family="${MONO_STACK}">${idx + 1}</text>
+  <text x="188" y="${y + (lines.length > 1 ? 62 : 82)}" fill="#0F172A" font-size="30" font-weight="700" font-family="${FONT_STACK}">${escapeXml(lines[0] || '')}</text>
+  ${lines[1] ? `<text x="188" y="${y + 106}" fill="#334155" font-size="28" font-weight="500" font-family="${FONT_STACK}">${escapeXml(lines[1])}</text>` : ''}`;
+    })
+    .join('\n');
+
+  const summaryY = 900;
+  const repoLabel = escapeXml(truncateByDisplayWidth(context.projectName, 42));
+  const branchLabel = escapeXml(truncateByDisplayWidth(context.branch || 'main', 26));
+
+  const p4Summary = `
+  ${p4Next}
+  <rect x="76" y="${summaryY}" width="928" height="330" rx="20" fill="#0F172A"/>
+  <rect x="76" y="${summaryY}" width="928" height="8" rx="4" fill="#2563EB"/>
+  <text x="116" y="${summaryY + 66}" fill="#93C5FD" font-size="21" font-weight="800" font-family="${MONO_STACK}">REPORT METADATA · 办公专业版</text>
+  <text x="116" y="${summaryY + 132}" fill="#FFFFFF" font-size="38" font-weight="900" font-family="${FONT_STACK}">项目同步完成 · 可直接发工作群</text>
+  <text x="116" y="${summaryY + 194}" fill="#CBD5E1" font-size="25" font-weight="600" font-family="${MONO_STACK}">Repo   : ${repoLabel}</text>
+  <text x="116" y="${summaryY + 240}" fill="#CBD5E1" font-size="25" font-weight="600" font-family="${MONO_STACK}">Branch : ${branchLabel} · ${escapeXml(formatted.meta.dateStr)}</text>
+  <text x="116" y="${summaryY + 286}" fill="#94A3B8" font-size="22" font-weight="500" font-family="${FONT_STACK}">支持飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ 一键推送</text>`;
+
+  const slide4 = renderOfficeSlideShell({
+    uid: 'office_p4',
+    pageIndex: 3,
+    pageTag: 'P4 / 4 · 明日计划',
+    heading: '下一步行动项',
+    subtitle: '明确下一周期交付重点与协作对齐事项',
+    bodySvg: p4Summary,
+    footer,
+    rightCue: '04 / 04 ✓',
+  });
+
+  return [
+    { id: 'slide-1-cover', label: 'P1 简报封面', svg: slide1 },
+    { id: 'slide-2-changes', label: 'P2 今日产出', svg: slide2 },
+    { id: 'slide-3-pitfalls', label: 'P3 风险复盘', svg: slide3 },
+    { id: 'slide-4-next', label: 'P4 明日计划', svg: slide4 },
+  ];
+}
+
 /**
  * Render a 3:4 vertical Devlog cover card (1080x1440).
  * When heroImageDataUri is provided, uses a bright Xiaohongshu comic-poster layout
@@ -411,6 +778,9 @@ export function renderVerticalCardSvg(
   formatted,
   { heroImageDataUri, isMascotCover = false } = {}
 ) {
+  if (isOfficeMode(formatted)) {
+    return renderOfficeVerticalCardSvg(context, formatted);
+  }
   const theme = resolveStyle(formatted?.meta?.style);
   const comic = resolveComicPalette(theme.id);
   const rawProject = context.projectName.split('/').pop() || context.projectName;
@@ -538,6 +908,9 @@ export function renderVerticalCardSvg(
  * Render a 16:9 horizontal Devlog summary card (1600x900) for Bilibili & GitHub.
  */
 export function renderHorizontalCardSvg(context, formatted, { heroImageDataUri } = {}) {
+  if (isOfficeMode(formatted)) {
+    return renderOfficeHorizontalCardSvg(context, formatted);
+  }
   const theme = resolveStyle(formatted?.meta?.style);
   const comic = resolveComicPalette(theme.id);
   const project = escapeXml(truncateByDisplayWidth(context.projectName, 34));
@@ -694,6 +1067,9 @@ export function renderCarouselSlidesSvg(
   formatted,
   { heroImageDataUri, isMascotCover = false } = {}
 ) {
+  if (isOfficeMode(formatted)) {
+    return renderOfficeCarouselSlidesSvg(context, formatted);
+  }
   const theme = resolveStyle(formatted?.meta?.style);
   const comic = resolveComicPalette(theme.id);
   const project = context.projectName.split('/').pop() || context.projectName;

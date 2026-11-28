@@ -45,7 +45,14 @@ import {
   saveConfig,
   validateConfigPatch,
 } from './config.js';
-import { AVAILABLE_STYLES, MODEL_STYLES } from './styles.js';
+import {
+  AVAILABLE_EDITIONS,
+  AVAILABLE_STYLES,
+  EDITIONS,
+  MODEL_STYLES,
+  normalizeEditionId,
+  OFFICE_STYLE,
+} from './styles.js';
 
 const PACKAGE_ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
 
@@ -53,6 +60,7 @@ const VALUE_FLAGS = new Map([
   ['--repo', 'repoPath'],
   ['--name', 'projectName'],
   ['--title', 'title'],
+  ['--edition', 'edition'],
   ['--style', 'style'],
   ['--since', 'since'],
   ['--out', 'outputDir'],
@@ -206,6 +214,20 @@ export function parseArgs(argv) {
   return { command, opts };
 }
 
+export function resolveCliEdition(rawEdition, fallbackEdition = 'community') {
+  if (!rawEdition) {
+    return normalizeEditionId(fallbackEdition) || 'community';
+  }
+  const normalized = normalizeEditionId(rawEdition);
+  if (!normalized) {
+    throw new CliError(
+      `Invalid edition "${rawEdition}". Valid editions: ${AVAILABLE_EDITIONS.join(', ')} (aliases: work, pro, acg, 办公, 社区)`,
+      `node src/cli.js generate --edition office`
+    );
+  }
+  return normalized;
+}
+
 export function resolveCliStyle(rawStyle, fallbackStyle = 'big_fat_fish') {
   if (!rawStyle) {
     return normalizeStyleId(fallbackStyle) || 'big_fat_fish';
@@ -315,8 +337,10 @@ Common Generate Options:
   --ai-model <name>            Override AI summarizer model name
   --ai-endpoint <url>          Override AI summarizer HTTP endpoint
   --ai-api-key <key>           Override AI summarizer API key
+  --edition <id>               community (default, 二次元工作日报图文) | office (极简商务办公版)
+                               (aliases: acg, work, pro, 社区, 办公)
   --style <id>                 big_fat_fish (default) | gemini | chatgpt | claude
-                               (aliases: fish, hakimi, gpt)
+                               (community edition AI-girl styles; aliases: fish, hakimi, gpt)
   --repo <path>                Local git repository path (default: cwd)
   --scan-dir <path>            Scan parent directory for active git repos (repeatable or comma-separated)
   --repos <paths>              Aggregate explicit git repository paths (repeatable or comma-separated)
@@ -411,6 +435,7 @@ async function runDoctor(opts, savedCfg) {
 
   // 4. Config & credentials readiness
   const inspected = inspectConfig({ repoPath });
+  const activeEdition = normalizeEditionId(savedCfg.defaultEdition) || 'community';
   const activeStyle = normalizeStyleId(savedCfg.defaultStyle) || 'big_fat_fish';
   const sourceLabels = [];
   if (inspected.sources.globalExists) sourceLabels.push('global');
@@ -419,10 +444,10 @@ async function runDoctor(opts, savedCfg) {
     id: 'config',
     label: 'Configuration',
     status: 'ok',
-    detail: `style=${activeStyle}, out=${savedCfg.outputDir || 'out'}, sources=${sourceLabels.length ? sourceLabels.join('+') : 'defaults'}`,
+    detail: `edition=${activeEdition}, style=${activeStyle}, out=${savedCfg.outputDir || 'out'}, sources=${sourceLabels.length ? sourceLabels.join('+') : 'defaults'}`,
     hint: sourceLabels.length
       ? ''
-      : 'Optional: node src/cli.js config set defaultStyle big_fat_fish',
+      : 'Optional: node src/cli.js config set defaultEdition office (or defaultStyle big_fat_fish)',
   });
 
   // 4b. Watched multi-repo directories & repos (optional)
@@ -939,7 +964,11 @@ export async function main(argv = process.argv.slice(2)) {
     }
     const since = opts.since || (period === 'weekly' ? '7 days ago' : '24 hours ago');
     const rawContext = collectCliContext(opts, savedCfg, { repoPath, since });
-    const style = resolveCliStyle(opts.style, savedCfg.defaultStyle);
+    const reportEdition = opts.edition ? resolveCliEdition(opts.edition, 'office') : 'office';
+    const style =
+      reportEdition === 'office' && !opts.style
+        ? 'office'
+        : resolveCliStyle(opts.style, savedCfg.defaultStyle);
     const { context, title, aiSummary } = await maybeEnrichContextWithAI({
       opts,
       savedCfg,
@@ -1065,7 +1094,11 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   if (command === 'generate' || command === 'publish-github') {
-    const style = resolveCliStyle(opts.style, savedCfg.defaultStyle);
+    const edition = resolveCliEdition(opts.edition, savedCfg.defaultEdition);
+    const style =
+      edition === 'office'
+        ? 'office'
+        : resolveCliStyle(opts.style, savedCfg.defaultStyle);
     const since = opts.since || '24 hours ago';
     const rawContext = collectCliContext(opts, savedCfg, { repoPath, since });
 
@@ -1076,13 +1109,14 @@ export async function main(argv = process.argv.slice(2)) {
       repoPath: rawContext.repoPath || repoPath,
       since,
       style,
-      mode: 'devlog',
+      mode: edition === 'office' ? 'report' : 'devlog',
       silentStdout: Boolean(opts.json || command === 'publish-github'),
     });
 
     const formatted = formatMultiPlatformDevlog(context, {
       title,
       style,
+      edition,
     });
 
     if (command === 'generate') {
@@ -1102,13 +1136,18 @@ export async function main(argv = process.argv.slice(2)) {
         }
       }
 
+      const activeTheme = edition === 'office' ? OFFICE_STYLE : MODEL_STYLES[style] || MODEL_STYLES.big_fat_fish;
+      const editionMeta = EDITIONS[edition] || EDITIONS.community;
+
       if (opts.json) {
         console.log(
           JSON.stringify(
             {
               ok: true,
+              edition,
+              editionName: editionMeta.name,
               style,
-              styleName: MODEL_STYLES[style]?.name || style,
+              styleName: activeTheme.name || style,
               projectName: context.projectName,
               branch: context.branch,
               commits: context.commits.length,
@@ -1139,10 +1178,12 @@ export async function main(argv = process.argv.slice(2)) {
         return;
       }
 
-      const theme = MODEL_STYLES[style] || MODEL_STYLES.big_fat_fish;
       console.log(`✅ Devlog bundle generated: ${bundleDir}`);
       console.log(
-        `   Style      : ${theme.emoji} ${theme.name} (${style})`
+        `   Edition    : ${editionMeta.emoji} ${editionMeta.name} (${edition}) · ${editionMeta.tagline}`
+      );
+      console.log(
+        `   Style      : ${activeTheme.emoji} ${activeTheme.name} (${style})`
       );
       console.log(
         `   Summary    : ${context.projectName} (${context.branch || 'main'}) · ${context.commits.length} commits · ${context.stats.filesChanged} files (+${context.stats.insertions}/-${context.stats.deletions})`

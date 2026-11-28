@@ -17,7 +17,7 @@ import {
   generateVisualImage,
 } from './image-gen.js';
 import { loadConfig, saveConfig } from './config.js';
-import { resolveStyle } from './styles.js';
+import { normalizeEditionId, resolveStyle } from './styles.js';
 import { mergeAiSummary, summarizeWithAI } from './ai-summarizer.js';
 
 export const name = 'dsh-plugin-devlog-poster';
@@ -322,6 +322,12 @@ function createToolSpecs(runtimeConfig = {}) {
           required: false,
           description: 'Optional devlog title.',
         },
+        edition: {
+          type: 'string',
+          required: false,
+          description:
+            'Edition mode: "community" (default, 二次元工作日报图文) | "office" (极简商务办公版).',
+        },
         style: {
           type: 'string',
           required: false,
@@ -395,7 +401,12 @@ function createToolSpecs(runtimeConfig = {}) {
         ],
       },
       async execute(args = {}) {
-        const style = args.style || config.defaultStyle || 'big_fat_fish';
+        const edition =
+          normalizeEditionId(args.edition || config.defaultEdition) || 'community';
+        const style =
+          edition === 'office'
+            ? 'office'
+            : args.style || config.defaultStyle || 'big_fat_fish';
         let context = resolveToolContext(args);
         let title = args.title;
         let aiSummary = null;
@@ -406,7 +417,7 @@ function createToolSpecs(runtimeConfig = {}) {
             repoPath: args.repoPath || context.repoPath,
             since: args.since || context.since,
             style,
-            mode: 'devlog',
+            mode: edition === 'office' ? 'report' : 'devlog',
             provider: args.aiProvider || config.aiProvider || 'auto',
             model: args.aiModel || config.aiModel || undefined,
             endpoint: args.aiEndpoint || config.aiEndpoint || undefined,
@@ -436,6 +447,7 @@ function createToolSpecs(runtimeConfig = {}) {
           title,
           xhsTitle: args.xhsTitle,
           style,
+          edition,
         });
         const written = writeDevlogBundle(context, formatted, {
           outputDir: args.outputDir || defaultOutputDir,
@@ -684,7 +696,7 @@ function createToolSpecs(runtimeConfig = {}) {
             context,
             repoPath: args.repoPath || context.repoPath,
             since,
-            style: args.style || config.defaultStyle || 'big_fat_fish',
+            style: args.style || 'office',
             mode: 'report',
             provider: args.aiProvider || config.aiProvider || 'auto',
             model: args.aiModel || config.aiModel || undefined,

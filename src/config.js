@@ -1,7 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { AVAILABLE_STYLES } from './styles.js';
+import {
+  AVAILABLE_EDITIONS,
+  AVAILABLE_STYLES,
+  normalizeEditionId,
+} from './styles.js';
 import { SUPPORTED_REPORT_CHANNELS } from './work-report.js';
 import { SUPPORTED_IMAGE_PROVIDERS } from './image-gen.js';
 import { SUPPORTED_AI_PROVIDERS } from './ai-summarizer.js';
@@ -10,6 +14,7 @@ export const DEFAULT_CONFIG_PATH = join(homedir(), '.dsh-devlog-poster', 'config
 export const LOCAL_CONFIG_FILENAME = '.devlog-poster.json';
 
 export const DEFAULT_CONFIG = {
+  defaultEdition: 'community',
   defaultStyle: 'big_fat_fish',
   outputDir: 'out',
   aiProvider: 'auto',
@@ -116,6 +121,18 @@ export function validateConfigPatch(patch = {}) {
     }
 
     const value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
+
+    if (key === 'defaultEdition') {
+      const editionId = normalizeEditionId(String(value));
+      if (!editionId) {
+        errors.push(
+          `Invalid defaultEdition "${value}". Valid editions: ${AVAILABLE_EDITIONS.join(', ')} (aliases: work, pro, acg)`
+        );
+        continue;
+      }
+      normalized[key] = editionId;
+      continue;
+    }
 
     if (key === 'defaultStyle') {
       const styleId = normalizeStyleId(String(value));
