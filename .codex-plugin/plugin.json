@@ -1,6 +1,6 @@
 {
   "name": "devlog-poster",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Generate multi-platform devlogs, 4-slide visual cards, and daily or weekly work reports from single or multi-repo git commits.",
   "author": {
     "name": "Kirakila7",

@@ -1,14 +1,29 @@
 # dsh-plugin-devlog-poster
 
-**DeepSeek Harness (DSH)** 的 **Build in Public** 开发日志、4 图轮播卡片与团队日报/周报多平台发布插件（零外部运行时依赖，Node >= 20）。
+[![Version](https://img.shields.io/badge/release-v0.9.0-2563EB?style=flat-square)](https://github.com/Kirakila7/dsh-plugin-devlog-poster/releases)
+[![Zero Dependencies](https://img.shields.io/badge/runtime_dependencies-0-10B981?style=flat-square)](./package.json)
+[![Node](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square)](https://nodejs.org)
+[![License](https://img.shields.io/badge/license-MIT-64748B?style=flat-square)](./LICENSE)
+[![Ecosystems](https://img.shields.io/badge/ecosystems-DSH%20%7C%20Antigravity%20%7C%20Codex%20%7C%20Gemini%20CLI%20%7C%20Skills-7C3AED?style=flat-square)](#4-大生态一键安装dsh--agent-skills--antigravity--openai-codex)
 
-一次采集本地 Git / DSH 会话进展，自动完成 **一稿四吃** + **4 图轮播视觉套图** + **本地预览/批量导出 PNG** + **工作日报直推** + **GitHub / 草稿箱联动**：
+> **English Quick Summary**: Zero-dependency Node.js (>=20) **Build-in-Public devlog, 4-slide visual card & multi-repo work-report engine** with **Dual Editions** — switch in one click between **💼 Office Executive Edition** (clean minimalist KPI work briefs for Slack/Feishu/DingTalk/LinkedIn, zero anime) and **✨ Community ACG Edition** (4 AI-girl comic 4-slide carousels for Xiaohongshu/Douyin/Bilibili/X/Reddit/Bluesky/Dev.to). Works at **zero extra LLM API cost** inside AI coding agents (`npx skills add Kirakila7/dsh-plugin-devlog-poster` or `npx -y github:Kirakila7/dsh-plugin-devlog-poster generate --edition office --open`). Already listed in **DSH Official Marketplace** & **Antigravity Awesome Skills**.
+
+**DeepSeek Harness (DSH) / Antigravity / Codex / Gemini CLI** 通用的 **Build in Public** 开发日志、4 图轮播卡片与团队日报/周报多平台发布插件（零外部运行时依赖，Node >= 20）。
+
+一次采集本地单仓 / 多仓 Git 进展，支持 **💼 办公专业版** 与 **✨ 社区二创版** 顶部一键切换，自动完成 **海内外 9 平台文案** + **4 图 1080×1440 视觉套图** + **本地预览 / Playwright 自动填草稿箱** + **6 通道工作日报直推**：
+- **💼 办公专业版（`--edition office`）**：极简商务 4 图简报（KPI 仪表盘 + 今日交付 / 风险复盘 / 下一步行动项），零二次元零玩梗，直接发飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ / LinkedIn
+- **✨ 社区二创版（`--edition community`）**：保留四大 AI 娘二次元文化（素材来源 **Zipzipipe**），以「工作日报图文」形式输出亮色漫画 4 图轮播，适配小红书 / 抖音 / B 站 / X
 - **GitHub**：结构化 Release Notes / `DEVLOG.md`（支持 `gh release create` 直发与 dry-run 确认门）
-- **小红书**：强钩子图文笔记 + 3:4 竖版封面与 P1~P4 轮播套图（SVG，浏览器预览页可一键导出 PNG）
-- **B站**：图文动态 + 60 秒口播视频大纲 + 16:9 横版进度卡片
-- **抖音**：极简图文笔记 + 30 秒快节奏口播脚本 + 3:4 竖版封面与 4 图轮播套图
+- **小红书 / 抖音 / B 站**：强钩子图文 + 3:4 竖版 4 图轮播（支持本地 Playwright 自动渲染 1080×1440 PNG 并持久化登录自动填草稿箱，绝不自动点最终发布）+ B 站 16:9 横卡与口播脚本
 - **海外开发者平台（Build in Public）**：原生英文适配 **X (Twitter)**（≤280 字符单推 + 3–4 条串推 Thread + 预填直发链接）、**Reddit**（真实不营销 Showoff 长帖 + 推荐版块 + 预填发帖链接）、**LinkedIn**（克制工程复盘帖）、**Bluesky**（≤300 字符 + ATProto 直发 / Intent 链接）与 **Dev.to**（含 YAML Frontmatter 的完整 Markdown + 官方 API 草稿直发）
 - **团队日报 / 周报**：纯文本 + Markdown 双模板，支持飞书 / 钉钉 / 企业微信 / Slack / Discord / QQ (OneBot v11)
+
+| 维度 | 💼 办公专业版 (`--edition office`) | ✨ 社区二创版 (`--edition community`) |
+| --- | --- | --- |
+| **定位** | 团队日报 / 周报 / 站会汇报 | 二次元「工作日报图文」社区报 |
+| **视觉风格** | 深蓝页眉 + 量化 KPI 卡片，零二次元零玩梗 | 四大 AI 娘封面 + 亮色漫画 4 图轮播 |
+| **适用平台** | 飞书 / 钉钉 / 企微 / Slack / LinkedIn / GitHub | 小红书 / 抖音 / B 站 / X / Reddit / Dev.to |
+| **一键切换** | `preview.html` 顶部胶囊按钮实时互切 | 同工作台实时互切 + 4 位 AI 娘换肤 |
 
 ---
 

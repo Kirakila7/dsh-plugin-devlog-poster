@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = process.cwd();
-const EXPECTED_VERSION = '0.8.0';
+const EXPECTED_VERSION = '0.9.0';
 
 function readJson(relPath) {
   const fullPath = resolve(ROOT, relPath);
